@@ -1,0 +1,33 @@
+Users
+ │
+ ├──────────────┐
+ │              │
+ ▼              ▼
+UserPreferences RefreshTokens
+ │
+ ▼
+Searches
+ │
+ ├───────────────┐
+ ▼               ▼
+FlightResults  Predictions
+ │
+ ├───────────┐
+ ▼           ▼
+Favorites Recommendations
+                 │
+                 ▼
+             Feedback
+
+Airports ─────────────┐
+                      │
+                      ▼
+                 FlightResults
+                      ▲
+                      │
+Airlines ─────────────┘
+
+AnalyticsEvents
+      ▲
+      │
+    Users
