@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import sys
-from pathlib import Path
 from logging.config import fileConfig
+from pathlib import Path
 
 from alembic import context
 from sqlalchemy import engine_from_config, pool
@@ -19,8 +19,6 @@ from app.database.base import Base
 config = context.config
 
 # Configure logging
-if config.config_file_name is not None:
-    fileConfig(config.config_file_name)
 
 
 def _escape_alembic_url(value: str) -> str:

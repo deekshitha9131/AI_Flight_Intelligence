@@ -12,11 +12,19 @@ from app.models.user import UserRole
 class UserBase(BaseModel):
     """Common base schema for users."""
 
-    first_name: str = Field(..., min_length=2, max_length=50, description="User first name")
-    last_name: str = Field(..., min_length=2, max_length=50, description="User last name")
+    first_name: str = Field(
+        ..., min_length=2, max_length=50, description="User first name"
+    )
+    last_name: str = Field(
+        ..., min_length=2, max_length=50, description="User last name"
+    )
     email: EmailStr = Field(..., description="User email address")
-    phone_number: str | None = Field(default=None, max_length=20, description="Phone number in international format")
-    profile_image: str | None = Field(default=None, description="Optional profile image URL")
+    phone_number: str | None = Field(
+        default=None, max_length=20, description="Phone number in international format"
+    )
+    profile_image: str | None = Field(
+        default=None, description="Optional profile image URL"
+    )
     role: UserRole = Field(default=UserRole.USER, description="Assigned role")
 
     @field_validator("first_name", "last_name")
@@ -45,7 +53,12 @@ class UserBase(BaseModel):
 class UserCreate(UserBase):
     """Input schema for creating a user account."""
 
-    password: str = Field(..., min_length=8, max_length=128, description="Password that meets complexity requirements")
+    password: str = Field(
+        ...,
+        min_length=8,
+        max_length=128,
+        description="Password that meets complexity requirements",
+    )
 
     @field_validator("password")
     @classmethod

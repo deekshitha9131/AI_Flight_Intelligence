@@ -1,65 +1,74 @@
 from functools import lru_cache
+from pathlib import Path
 from typing import Literal
 
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+BASE_DIR = Path(__file__).resolve().parents[2]
+ENV_FILE = BASE_DIR / ".env"
+
 
 class Settings(BaseSettings):
-    """Central application configuration for the FastAPI backend.
-
-    The settings object is loaded from the local .env file and validated using
-    Pydantic so that configuration errors are surfaced early during startup.
+    """
+    Central application configuration.
     """
 
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=ENV_FILE,
         env_file_encoding="utf-8",
         extra="ignore",
         case_sensitive=False,
     )
 
     # Application metadata
-    app_name: str = Field(..., min_length=1, description="Application display name.")
-    app_version: str = Field(default="1.0.0", min_length=1, description="Current API version.")
+    app_name: str = Field(..., min_length=1)
+    app_version: str = Field(default="1.0.0")
     environment: Literal["development", "testing", "staging", "production"] = Field(
-        default="development",
-        description="Runtime environment used to toggle behavior.",
+        default="development"
     )
 
-    # Database configuration
-    database_url: str = Field(..., min_length=1, description="Primary database connection string.")
+    # Database
+    database_url: str = Field(..., min_length=1)
 
-    # Security configuration
-    secret_key: str = Field(..., min_length=16, description="Secret used for JWT signing and session protection.")
-    jwt_algorithm: str = Field(default="HS256", min_length=1, description="JWT signing algorithm.")
-    access_token_expire_minutes: int = Field(default=30, ge=1, description="JWT access token lifetime in minutes.")
+    # Security
+    secret_key: str = Field(..., min_length=16)
+    jwt_algorithm: str = Field(default="HS256")
+    access_token_expire_minutes: int = Field(default=30, ge=1)
+    refresh_token_expire_days: int = Field(default=7, ge=1)
 
-    # Cache and queue configuration
-    redis_url: str = Field(default="redis://localhost:6379", min_length=1, description="Redis connection string.")
-    cors_origins: str = Field(default="http://localhost:3000", description="Comma-separated list of allowed origins.")
+    # Cache
+    redis_url: str = Field(default="redis://localhost:6379")
 
-    # Third-party integrations
-    amadeus_api_key: str = Field(default="", description="Amadeus API key.")
-    amadeus_api_secret: str = Field(default="", description="Amadeus API secret.")
+    cors_origins: str = Field(default="http://localhost:3000")
+
+    # Amadeus
+    amadeus_api_key: str = Field(default="")
+    amadeus_api_secret: str = Field(default="")
+    amadeus_base_url: str = Field(default="https://test.api.amadeus.com")
+    amadeus_timeout_seconds: float = Field(default=10.0)
+
+    # AI
+    openai_api_key: str = Field(default="")
+    openai_model: str = Field(default="gpt-3.5-turbo")
 
     @field_validator("environment", mode="before")
     @classmethod
-    def validate_environment(cls, value: str | None) -> str:
-        """Normalize the environment value to a lowercase supported value."""
+    def validate_environment(cls, value):
         if value is None:
             return "development"
+
         return str(value).strip().lower()
 
     @property
-    def cors_origins_list(self) -> list[str]:
-        """Return CORS origins as a parsed list for FastAPI middleware."""
-        return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
+    def cors_origins_list(self):
+        return [
+            origin.strip() for origin in self.cors_origins.split(",") if origin.strip()
+        ]
 
 
 @lru_cache(maxsize=1)
 def get_settings() -> Settings:
-    """Return a cached singleton settings instance for the application."""
     return Settings()
 
 

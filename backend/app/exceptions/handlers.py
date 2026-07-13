@@ -1,11 +1,11 @@
 from __future__ import annotations
-from fastapi.encoders import jsonable_encoder
 
 import logging
 from datetime import datetime, timezone
 from typing import Any
 
 from fastapi import Request, status
+from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from sqlalchemy.exc import SQLAlchemyError
@@ -71,10 +71,7 @@ async def validation_exception_handler(
         clean = dict(err)
 
         if "ctx" in clean:
-            clean["ctx"] = {
-                k: str(v)
-                for k, v in clean["ctx"].items()
-            }
+            clean["ctx"] = {k: str(v) for k, v in clean["ctx"].items()}
 
         errors.append(clean)
 
@@ -88,7 +85,10 @@ async def validation_exception_handler(
         details={"errors": errors},
     )
 
-async def sqlalchemy_exception_handler(request: Request, exc: SQLAlchemyError) -> JSONResponse:
+
+async def sqlalchemy_exception_handler(
+    request: Request, exc: SQLAlchemyError
+) -> JSONResponse:
     """Handle database failures raised by SQLAlchemy."""
     logger.exception("SQLAlchemy error: %s", exc)
     return build_error_response(
@@ -99,7 +99,9 @@ async def sqlalchemy_exception_handler(request: Request, exc: SQLAlchemyError) -
     )
 
 
-async def unexpected_exception_handler(request: Request, exc: Exception) -> JSONResponse:
+async def unexpected_exception_handler(
+    request: Request, exc: Exception
+) -> JSONResponse:
     """Handle uncaught exceptions as a last line of defense."""
     logger.exception("Unexpected exception: %s", exc)
     return build_error_response(

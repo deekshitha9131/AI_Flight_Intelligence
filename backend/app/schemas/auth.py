@@ -11,9 +11,10 @@ class LoginRequest(BaseModel):
 
 
 class LoginResponseData(BaseModel):
-    """JWT access token payload returned after a successful login."""
+    """JWT token payload returned after a successful login."""
 
     access_token: str
+    refresh_token: str
     token_type: str = "bearer"
     expires_in: int
 
@@ -24,3 +25,25 @@ class LoginResponse(BaseModel):
     success: bool
     message: str
     data: LoginResponseData
+
+
+class RefreshRequest(BaseModel):
+    """Request payload for token refresh."""
+
+    refresh_token: str = Field(..., min_length=1, description="Valid refresh token")
+
+
+class RefreshResponseData(BaseModel):
+    """New token pair returned after a successful refresh."""
+
+    access_token: str
+    refresh_token: str
+    token_type: str = "bearer"
+
+
+class RefreshResponse(BaseModel):
+    """Token refresh response payload."""
+
+    success: bool
+    message: str
+    data: RefreshResponseData

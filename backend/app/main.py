@@ -10,6 +10,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.exc import SQLAlchemyError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
+from app.ai.llm_provider import build_llm_provider
+from app.ai.model_loader import ModelLoader
 from app.api.v1.endpoints.health import router as health_router
 from app.api.v1.router import router as v1_router
 from app.core.config import get_settings
@@ -24,6 +26,7 @@ from app.exceptions.handlers import (
     unexpected_exception_handler,
     validation_exception_handler,
 )
+from app.integrations.amadeus.client import AmadeusClient
 from app.middleware.process_time import ProcessTimeMiddleware
 from app.middleware.request_logging import RequestLoggingMiddleware
 
@@ -41,14 +44,38 @@ async def lifespan(app: FastAPI) -> Any:
         logger.info("Database connection healthy")
 
         # Create all database tables (Development Only)
+        print("=" * 80)
+        for table_name, table in Base.metadata.tables.items():
+            print(f"\nTABLE: {table_name}")
+            for idx in table.indexes:
+                print(f"INDEX: {idx.name} -> {[c.name for c in idx.columns]}")
+        print("=" * 80)
         Base.metadata.create_all(bind=engine)
         logger.info("Database tables created successfully")
 
     else:
         logger.warning("Database connection check failed")
 
+    amadeus_client = AmadeusClient.from_settings()
+    app.state.amadeus = amadeus_client
+    logger.info("AmadeusClient initialised (base_url=%s).", settings.amadeus_base_url)
+
+    model_loader = ModelLoader()
+    model_loader.load()
+    app.state.model_loader = model_loader
+    logger.info(
+        "ModelLoader initialised | version=%s fallback=%s",
+        model_loader.model_version,
+        model_loader.is_fallback,
+    )
+
+    llm_provider = build_llm_provider()
+    app.state.llm_provider = llm_provider
+    logger.info("LLMProvider initialised: %s", type(llm_provider).__name__)
+
     yield
 
+    await amadeus_client.close()
     logger.info("Shutting down application")
 
 

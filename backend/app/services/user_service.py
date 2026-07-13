@@ -31,7 +31,11 @@ class UserService:
             password_hash=hash_password(payload.password),
             phone_number=payload.phone_number,
             profile_image=payload.profile_image,
-            role=payload.role.value if isinstance(payload.role, UserRole) else payload.role,
+            role=(
+                payload.role.value
+                if isinstance(payload.role, UserRole)
+                else payload.role
+            ),
             is_active=True,
             is_verified=False,
             created_at=datetime.now(timezone.utc),
