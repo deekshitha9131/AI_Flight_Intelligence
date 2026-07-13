@@ -1,0 +1,50 @@
+services:
+  database:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ai_flight_intelligence
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d ai_flight_intelligence"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  backend:
+    build:
+      context: ./backend
+    environment:
+      APP_NAME: AI Flight Intelligence
+      ENVIRONMENT: development
+      DATABASE_URL: postgresql://postgres:postgres@database:5432/ai_flight_intelligence
+      SECRET_KEY: change-me-before-production
+      REDIS_URL: redis://redis:6379/0
+      CORS_ORIGINS: http://localhost:5173
+    depends_on:
+      database:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    ports:
+      - "8000:8000"
+
+  frontend:
+    build:
+      context: ./frontend
+    depends_on:
+      - backend
+    ports:
+      - "5173:5173"
+
+volumes:
+  postgres_data:

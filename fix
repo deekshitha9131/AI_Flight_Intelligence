@@ -1,0 +1,371 @@
+Your project is actually in good shape: **103 tests passed out of 120 (≈86%)**. The remaining **17 failures are clustered into only a few root causes**, not 17 independent bugs.
+
+Here's the breakdown.
+
+---
+
+# 1. Search History Tests (4 Failures) ⭐ Easiest Fix
+
+All these failures are the same bug.
+
+```
+ForeignKeyViolation:
+Key (user_id)=... is not present in table "users"
+```
+
+Your model is correct.
+
+```python
+user_id = mapped_column(
+    ForeignKey("users.id", ondelete="CASCADE")
+)
+```
+
+The tests are wrong.
+
+They do
+
+```python
+_insert_history(
+    db_session,
+    user_id=uuid.uuid4()
+)
+```
+
+That UUID doesn't exist inside the users table.
+
+Postgres correctly rejects it.
+
+---
+
+## Failed tests
+
+```
+test_other_users_history_not_visible
+
+test_cannot_access_other_users_record
+
+test_cannot_delete_other_users_record
+
+test_clear_only_affects_current_user
+```
+
+All use
+
+```python
+uuid.uuid4()
+```
+
+instead of a real user.
+
+---
+
+## Correct approach
+
+Create another user.
+
+Example
+
+```python
+other_user = User(
+    first_name="Other",
+    last_name="User",
+    email="other@example.com",
+    password_hash="hashed",
+)
+db_session.add(other_user)
+db_session.flush()
+
+_insert_history(
+    db_session,
+    user_id=other_user.id
+)
+```
+
+or reuse a fixture
+
+```
+second_registered_user
+```
+
+if you already have one.
+
+---
+
+# 2. Flight Search Tests (7 Failures)
+
+These are all coming from
+
+```
+FlightSearchParams ValidationError
+```
+
+Notice they fail BEFORE hitting the endpoint.
+
+```
+ValidationError
+
+FlightSearchParams
+```
+
+That means your schema became stricter than the tests expect.
+
+Common reasons:
+
+* new required field
+* enum changed
+* date validation
+* Literal changed
+* regex changed
+
+You need the FIRST ValidationError.
+
+Run
+
+```
+pytest tests/test_flights.py -vv
+```
+
+or
+
+```
+pytest tests/test_flights.py::TestFlightSearchSuccess::test_successful_search_returns_200 -vv
+```
+
+Read the FIRST ValidationError.
+
+It will say something like
+
+```
+field required
+```
+
+or
+
+```
+Input should be one of...
+```
+
+That is the real issue.
+
+---
+
+# 3. Missing Amadeus Client (2 Failures)
+
+```
+AttributeError
+
+State has no attribute amadeus
+```
+
+Your endpoint probably does
+
+```python
+request.app.state.amadeus
+```
+
+but the test app never sets it.
+
+Usually inside startup you have
+
+```python
+app.state.amadeus = AmadeusClient(...)
+```
+
+Your test app probably skips lifespan.
+
+Need either
+
+```
+dependency override
+```
+
+or
+
+```
+fixture
+```
+
+that injects
+
+```python
+FakeAmadeus()
+```
+
+---
+
+# 4. Missing LLM Provider (1 Failure)
+
+Exactly the same issue.
+
+```
+State has no attribute llm_provider
+```
+
+Tests don't initialize
+
+```
+app.state.llm_provider
+```
+
+Need
+
+```python
+app.state.llm_provider = FakeLLM()
+```
+
+inside the test fixture.
+
+---
+
+# 5. Login Error Message (1 Failure)
+
+```
+assert "email" not in
+"invalid email or password"
+```
+
+Your API returns
+
+```
+Invalid email or password.
+```
+
+The test expects no mention of
+
+```
+email
+```
+
+That is a security policy.
+
+Instead return something generic.
+
+Example
+
+```
+Invalid credentials.
+```
+
+or
+
+```
+Authentication failed.
+```
+
+---
+
+# 6. Refresh Token Test (1 Failure)
+
+```
+new_tokens_are_different_from_old_tokens
+```
+
+This usually means
+
+```
+refresh()
+```
+
+generated the exact same JWT.
+
+Normally JWTs differ because of
+
+```
+iat
+jti
+exp
+```
+
+If yours only contains
+
+```
+sub
+email
+role
+```
+
+then issuing two tokens within one second produces identical JWTs.
+
+Add
+
+```
+jti = uuid4()
+```
+
+or
+
+```
+iat = datetime.utcnow()
+```
+
+to every token.
+
+---
+
+# Overall Priority
+
+## Priority 1 (Very Easy)
+
+✅ Fix Search History tests
+
+4 failures disappear.
+
+---
+
+## Priority 2
+
+Fix
+
+```
+app.state.amadeus
+```
+
+```
+app.state.llm_provider
+```
+
+3 failures disappear.
+
+---
+
+## Priority 3
+
+Fix
+
+```
+FlightSearchParams
+```
+
+7 failures disappear.
+
+---
+
+## Priority 4
+
+Fix login message.
+
+1 failure.
+
+---
+
+## Priority 5
+
+Fix refresh token uniqueness.
+
+1 failure.
+
+---
+
+# Summary
+
+| Category        | Failures | Root Cause                                           | Difficulty |
+| --------------- | -------: | ---------------------------------------------------- | ---------- |
+| Search History  |        4 | Invalid foreign key (`uuid4()` instead of real user) | ⭐ Easy     |
+| Flight Search   |        7 | `FlightSearchParams` validation mismatch             | ⭐⭐ Medium  |
+| Missing Amadeus |        2 | `app.state.amadeus` not initialized in tests         | ⭐ Easy     |
+| Missing LLM     |        1 | `app.state.llm_provider` not initialized             | ⭐ Easy     |
+| Login           |        1 | Error message exposes "email"                        | ⭐ Easy     |
+| Refresh Token   |        1 | New JWT identical to old JWT                         | ⭐⭐ Medium  |
+
+The biggest immediate win is to **fix the search history tests first**. Those four failures are not application bugs—they're test setup issues caused by inserting `FlightSearch` rows with random `user_id` values that violate the foreign key constraint. After that, focus on the shared test infrastructure (`app.state.amadeus` and `app.state.llm_provider`), then address the `FlightSearchParams` validation mismatch.
