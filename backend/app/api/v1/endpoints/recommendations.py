@@ -2,8 +2,6 @@ from __future__ import annotations
 
 import logging
 
-from fastapi import APIRouter, Depends, Query, status
-
 from app.dependencies.ai import get_recommendation_service
 from app.dependencies.auth import get_current_user
 from app.models.user import User
@@ -14,6 +12,7 @@ from app.schemas.recommendation import (
     FlightRecommendationsResponse,
 )
 from app.services.recommendation_service import RecommendationService
+from fastapi import APIRouter, Depends, Query, status
 
 logger = logging.getLogger(__name__)
 

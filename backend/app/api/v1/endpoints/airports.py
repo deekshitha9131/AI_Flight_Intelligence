@@ -2,13 +2,12 @@ from __future__ import annotations
 
 import logging
 
-from fastapi import APIRouter, Depends, Query, status
-
 from app.dependencies.amadeus import get_amadeus_client
 from app.integrations.amadeus.client import AmadeusClient
 from app.repositories.airport_repository import AirportRepository
 from app.schemas.airport import AirportSearchResponse
 from app.services.airport_service import AirportService
+from fastapi import APIRouter, Depends, Query, status
 
 logger = logging.getLogger(__name__)
 

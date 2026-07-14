@@ -3,13 +3,12 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from uuid import UUID
 
-from sqlalchemy.orm import Session
-
 from app.auth.password import hash_password
 from app.exceptions.base import NotFoundException, ValidationException
 from app.models.user import User, UserRole
 from app.repositories.user_repository import UserRepository
 from app.schemas.user import UserCreate, UserUpdate
+from sqlalchemy.orm import Session
 
 
 class UserService:

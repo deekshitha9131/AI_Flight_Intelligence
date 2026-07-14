@@ -19,6 +19,7 @@ Usage::
     df_test_features = fe.transform(df_test)
     encoders = fe.encoders
 """
+
 from __future__ import annotations
 
 from datetime import datetime, timezone
@@ -77,13 +78,19 @@ class FeatureEngineer:
         df = self._add_price_per_minute(df)
         df = self._encode_categoricals(df, fit=True)
         self._fitted = True
-        logger.info("FeatureEngineer.fit_transform: %d rows, %d columns.", len(df), len(df.columns))
+        logger.info(
+            "FeatureEngineer.fit_transform: %d rows, %d columns.",
+            len(df),
+            len(df.columns),
+        )
         return df
 
     def transform(self, df: pd.DataFrame) -> pd.DataFrame:
         """Transform new data using the fitted encoders."""
         if not self._fitted:
-            raise RuntimeError("FeatureEngineer must be fitted before calling transform().")
+            raise RuntimeError(
+                "FeatureEngineer must be fitted before calling transform()."
+            )
         df = df.copy()
         df = self._add_temporal_features(df)
         df = self._add_flag_features(df)
@@ -112,11 +119,15 @@ class FeatureEngineer:
             dep = pd.to_datetime(df["departure_date"], errors="coerce")
             df["departure_month"] = dep.dt.month.fillna(6).astype(int)
             df["departure_day_of_week"] = dep.dt.dayofweek.fillna(0).astype(int)
-            df["departure_week_of_year"] = dep.dt.isocalendar().week.fillna(1).astype(int)
+            df["departure_week_of_year"] = (
+                dep.dt.isocalendar().week.fillna(1).astype(int)
+            )
 
             # Days until departure (from today)
             today_ts = pd.Timestamp(today)
-            df["days_until_departure"] = (dep - today_ts).dt.days.fillna(30).clip(lower=0).astype(int)
+            df["days_until_departure"] = (
+                (dep - today_ts).dt.days.fillna(30).clip(lower=0).astype(int)
+            )
         else:
             df["departure_month"] = 6
             df["departure_day_of_week"] = 0
@@ -144,14 +155,17 @@ class FeatureEngineer:
         # Domestic flag
         if "origin" in df.columns and "destination" in df.columns:
             df["is_domestic"] = (
-                df["origin"].isin(_DOMESTIC_ORIGINS) & df["destination"].isin(_DOMESTIC_ORIGINS)
+                df["origin"].isin(_DOMESTIC_ORIGINS)
+                & df["destination"].isin(_DOMESTIC_ORIGINS)
             ).astype(int)
         else:
             df["is_domestic"] = 0
 
         # Holiday period flag
         if "departure_month" in df.columns:
-            df["is_holiday_period"] = df["departure_month"].isin(_HOLIDAY_MONTHS).astype(int)
+            df["is_holiday_period"] = (
+                df["departure_month"].isin(_HOLIDAY_MONTHS).astype(int)
+            )
         else:
             df["is_holiday_period"] = 0
 
@@ -183,12 +197,16 @@ class FeatureEngineer:
                 self._airline_pop = df["airline"].value_counts().to_dict()
 
         if "route" in df.columns:
-            df["route_frequency"] = df["route"].map(self._route_freq).fillna(1).astype(int)
+            df["route_frequency"] = (
+                df["route"].map(self._route_freq).fillna(1).astype(int)
+            )
         else:
             df["route_frequency"] = 1
 
         if "airline" in df.columns:
-            df["airline_popularity"] = df["airline"].map(self._airline_pop).fillna(1).astype(int)
+            df["airline_popularity"] = (
+                df["airline"].map(self._airline_pop).fillna(1).astype(int)
+            )
         else:
             df["airline_popularity"] = 1
 
@@ -223,7 +241,9 @@ class FeatureEngineer:
                 else:
                     # Handle unseen labels gracefully
                     known = set(le.classes_)
-                    df[col] = df[col].apply(lambda x: x if x in known else le.classes_[0])
+                    df[col] = df[col].apply(
+                        lambda x: x if x in known else le.classes_[0]
+                    )
                     df[encoded_col] = le.transform(df[col])
 
         return df

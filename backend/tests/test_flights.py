@@ -13,13 +13,12 @@ from typing import Any
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-from httpx import AsyncClient
-
 from app.dependencies.amadeus import get_amadeus_client
 from app.integrations.amadeus.exceptions import (
     AmadeusNotFoundException,
     AmadeusRateLimitException,
 )
+from httpx import AsyncClient
 
 pytestmark = pytest.mark.asyncio
 

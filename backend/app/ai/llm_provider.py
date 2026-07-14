@@ -1,22 +1,7 @@
 from __future__ import annotations
 
-"""LLM provider abstraction for the AI Travel Assistant.
-
-Design
-------
-- ``LLMProvider`` is the abstract base class.  Any LLM backend (OpenAI,
-  Anthropic, Bedrock, local Ollama, …) can be plugged in by implementing
-  ``complete()``.
-- ``OpenAIProvider`` wraps the ``openai`` SDK.  It is only instantiated when
-  ``openai_api_key`` is present in settings.
-- ``FallbackProvider`` returns a canned response so the assistant endpoint
-  remains functional without an LLM key (useful in development / CI).
-- ``get_llm_provider()`` is the factory used by the dependency injection layer.
-"""
-
 import logging
 from abc import ABC, abstractmethod
-from typing import Any
 
 logger = logging.getLogger(__name__)
 

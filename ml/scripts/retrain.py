@@ -1,4 +1,5 @@
 """Alias for the training pipeline, suitable for scheduled jobs."""
+
 from datetime import datetime, timezone
 
 from ml.config.settings import RAW_DATASET_CSV

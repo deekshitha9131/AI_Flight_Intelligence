@@ -3,9 +3,6 @@ from __future__ import annotations
 import logging
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Query, status
-from sqlalchemy.orm import Session
-
 from app.database.session import get_db
 from app.dependencies.amadeus import get_amadeus_client
 from app.dependencies.auth import get_current_user
@@ -14,6 +11,8 @@ from app.models.user import User
 from app.repositories.search_repository import SearchRepository
 from app.schemas.flight import FlightSearchParams, FlightSearchResponse, TravelClass
 from app.services.flight_service import FlightService
+from fastapi import APIRouter, Depends, Query, status
+from sqlalchemy.orm import Session
 
 logger = logging.getLogger(__name__)
 

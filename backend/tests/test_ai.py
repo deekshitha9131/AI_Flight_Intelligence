@@ -28,7 +28,6 @@ from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
-
 from app.ai.llm_provider import FallbackProvider
 from app.ai.model_loader import ModelLoader
 from app.dependencies.ai import get_llm_provider, get_model_loader

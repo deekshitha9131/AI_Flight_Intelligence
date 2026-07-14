@@ -1,5 +1,3 @@
-from fastapi import APIRouter
-
 from app.api.v1.endpoints import (
     ai,
     airports,
@@ -11,6 +9,7 @@ from app.api.v1.endpoints import (
     recommendations,
     search_history,
 )
+from fastapi import APIRouter
 
 router = APIRouter(prefix="/api/v1")
 router.include_router(health.router)

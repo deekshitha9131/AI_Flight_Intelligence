@@ -6,7 +6,6 @@ import time
 from typing import Any
 
 import httpx
-
 from app.integrations.amadeus.exceptions import (
     AmadeusAuthException,
     AmadeusConnectionException,

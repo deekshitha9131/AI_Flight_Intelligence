@@ -13,7 +13,6 @@ from datetime import datetime, timezone
 from uuid import uuid4
 
 import pytest
-
 from app.exceptions.base import ForbiddenException, UnauthorizedException
 from app.models.user import User
 from app.services.auth_service import AuthService

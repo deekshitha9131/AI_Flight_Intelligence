@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from uuid import UUID, uuid4
 
+from app.database.base import Base
 from sqlalchemy import (
     DateTime,
     Float,
@@ -14,8 +15,6 @@ from sqlalchemy import (
 )
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-
-from app.database.base import Base
 
 
 class UserPreferenceProfile(Base):

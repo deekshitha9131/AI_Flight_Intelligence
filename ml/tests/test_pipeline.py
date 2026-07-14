@@ -8,12 +8,28 @@ from ml.feature_engineering.engineer import FeatureEngineer
 
 
 def _frame() -> pd.DataFrame:
-    return pd.DataFrame([{
-        "origin": "HYD", "destination": "DXB", "departure_date": str(date.today() + timedelta(days=30)),
-        "return_date": None, "airline": "EK", "cabin_class": "ECONOMY", "adults": 1,
-        "children": 0, "infants": 0, "stops": 0, "trip_type": "ONE_WAY", "currency": "USD",
-        "flight_duration_minutes": 240, "departure_hour": 9, "arrival_hour": 12, "price": 350,
-    }])
+    return pd.DataFrame(
+        [
+            {
+                "origin": "HYD",
+                "destination": "DXB",
+                "departure_date": str(date.today() + timedelta(days=30)),
+                "return_date": None,
+                "airline": "EK",
+                "cabin_class": "ECONOMY",
+                "adults": 1,
+                "children": 0,
+                "infants": 0,
+                "stops": 0,
+                "trip_type": "ONE_WAY",
+                "currency": "USD",
+                "flight_duration_minutes": 240,
+                "departure_hour": 9,
+                "arrival_hour": 12,
+                "price": 350,
+            }
+        ]
+    )
 
 
 def test_clean_validate_and_engineer() -> None:

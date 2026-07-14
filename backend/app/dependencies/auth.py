@@ -1,14 +1,13 @@
 from __future__ import annotations
 
-from fastapi import Depends
-from fastapi.security import OAuth2PasswordBearer
-from sqlalchemy.orm import Session
-
 from app.auth.jwt import decode_access_token
 from app.database.session import get_db
 from app.exceptions.base import ForbiddenException, UnauthorizedException
 from app.models.user import User
 from app.services.auth_service import AuthService
+from fastapi import Depends
+from fastapi.security import OAuth2PasswordBearer
+from sqlalchemy.orm import Session
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
 

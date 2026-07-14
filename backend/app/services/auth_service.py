@@ -2,8 +2,6 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from sqlalchemy.orm import Session
-
 from app.auth.jwt import create_access_token, create_refresh_token, decode_refresh_token
 from app.auth.password import verify_password
 from app.exceptions.base import ForbiddenException, UnauthorizedException
@@ -14,6 +12,7 @@ from app.repositories.refresh_token_repository import (
 )
 from app.repositories.user_repository import UserRepository
 from app.schemas.auth import LoginRequest
+from sqlalchemy.orm import Session
 
 
 class AuthService:
@@ -39,7 +38,7 @@ class AuthService:
         if not verify_password(
             plain_password=payload.password, hashed_password=user.password_hash
         ):
-            raise UnauthorizedException(message="Invalid credentials.")
+            raise UnauthorizedException(message="Invalid email or password.")
 
         if not user.is_active:
             raise ForbiddenException(message="User account is inactive.")

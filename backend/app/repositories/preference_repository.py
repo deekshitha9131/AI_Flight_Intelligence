@@ -4,10 +4,9 @@ import json
 import logging
 from uuid import UUID
 
+from app.models.user_preference import UserPreferenceProfile
 from sqlalchemy import select
 from sqlalchemy.orm import Session
-
-from app.models.user_preference import UserPreferenceProfile
 
 logger = logging.getLogger(__name__)
 

@@ -3,6 +3,7 @@ ml/utils/serialisation.py
 --------------------------
 Utilities for saving and loading ML model artifacts.
 """
+
 from __future__ import annotations
 
 import json
@@ -12,7 +13,13 @@ from typing import Any
 
 import joblib
 
-from ml.config.settings import MODELS_DIR, ARTIFACTS_DIR, MODEL_FILE_PREFIX, PIPELINE_FILE_PREFIX, ENCODERS_FILE_PREFIX
+from ml.config.settings import (
+    ARTIFACTS_DIR,
+    ENCODERS_FILE_PREFIX,
+    MODEL_FILE_PREFIX,
+    MODELS_DIR,
+    PIPELINE_FILE_PREFIX,
+)
 from ml.utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -53,6 +60,7 @@ def save_encoders(encoders: dict[str, Any], version: str) -> Path:
 def save_metadata(metadata: dict[str, Any]) -> Path:
     """Write model metadata JSON to artifacts/."""
     from ml.config.settings import METADATA_FILE
+
     metadata["saved_at"] = datetime.now(timezone.utc).isoformat()
     METADATA_FILE.write_text(json.dumps(metadata, indent=2, default=str))
     logger.info("Metadata saved → %s", METADATA_FILE)
@@ -89,6 +97,7 @@ def load_encoders(version: str | None = None) -> dict[str, Any]:
 def load_metadata() -> dict[str, Any]:
     """Load model metadata JSON."""
     from ml.config.settings import METADATA_FILE
+
     if not METADATA_FILE.exists():
         return {}
     return json.loads(METADATA_FILE.read_text())
@@ -107,6 +116,7 @@ def get_latest_version() -> str | None:
 # ---------------------------------------------------------------------------
 # Private helpers
 # ---------------------------------------------------------------------------
+
 
 def _resolve_artifact(directory: Path, prefix: str, version: str | None) -> Path:
     """Resolve the artifact path for a given prefix and optional version."""

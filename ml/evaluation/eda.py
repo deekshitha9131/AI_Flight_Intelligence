@@ -1,4 +1,5 @@
 """Automatic, headless exploratory data analysis exports."""
+
 from __future__ import annotations
 
 import json
@@ -27,9 +28,14 @@ def generate_eda(frame: pd.DataFrame, output_dir: Path = ARTIFACTS_DIR / "eda") 
         plt.savefig(output_dir / "price_distribution.png", bbox_inches="tight")
         plt.close()
         report["price_summary"] = frame["price"].describe().to_dict()
-    for column, name in (("airline", "airline_comparison"), ("route", "route_comparison")):
+    for column, name in (
+        ("airline", "airline_comparison"),
+        ("route", "route_comparison"),
+    ):
         if column in frame and "price" in frame:
-            frame.groupby(column)["price"].mean().sort_values().tail(20).plot.bar(title=name)
+            frame.groupby(column)["price"].mean().sort_values().tail(20).plot.bar(
+                title=name
+            )
             plt.savefig(output_dir / f"{name}.png", bbox_inches="tight")
             plt.close()
     numeric = frame.select_dtypes(include="number")
@@ -39,5 +45,7 @@ def generate_eda(frame: pd.DataFrame, output_dir: Path = ARTIFACTS_DIR / "eda") 
         plt.title("Correlation matrix")
         plt.savefig(output_dir / "correlation_matrix.png", bbox_inches="tight")
         plt.close()
-    EDA_REPORT_FILE.write_text(json.dumps(report, indent=2, default=str), encoding="utf-8")
+    EDA_REPORT_FILE.write_text(
+        json.dumps(report, indent=2, default=str), encoding="utf-8"
+    )
     return EDA_REPORT_FILE

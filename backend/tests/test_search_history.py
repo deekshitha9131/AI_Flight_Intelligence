@@ -16,9 +16,8 @@ from datetime import datetime, timezone
 from typing import Any
 
 import pytest
-from sqlalchemy.orm import Session
-
 from app.models.flight_search import FlightSearch
+from sqlalchemy.orm import Session
 
 pytestmark = pytest.mark.asyncio
 

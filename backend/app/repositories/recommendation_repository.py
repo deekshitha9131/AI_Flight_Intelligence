@@ -4,10 +4,9 @@ import json
 import logging
 from uuid import UUID
 
+from app.models.recommendation_log import RecommendationLog
 from sqlalchemy import select
 from sqlalchemy.orm import Session
-
-from app.models.recommendation_log import RecommendationLog
 
 logger = logging.getLogger(__name__)
 

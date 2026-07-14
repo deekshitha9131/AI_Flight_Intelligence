@@ -4,10 +4,9 @@ from datetime import datetime, timezone
 from typing import Any
 from uuid import UUID
 
+from app.models.user import User, UserRole
 from sqlalchemy import select
 from sqlalchemy.orm import Session
-
-from app.models.user import User, UserRole
 
 
 class UserRepository:

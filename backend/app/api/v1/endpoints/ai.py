@@ -3,10 +3,6 @@ from __future__ import annotations
 import logging
 from typing import Annotated
 
-from fastapi import APIRouter, BackgroundTasks, Depends, Query, status
-from sqlalchemy.orm import Session
-
-from app.database.session import get_db
 from app.dependencies.ai import (
     get_insight_service,
     get_prediction_service,
@@ -16,16 +12,13 @@ from app.dependencies.ai import (
 from app.dependencies.auth import get_current_user
 from app.models.user import User
 from app.schemas.insights import SmartInsightsResponse, UserPreferenceResponse
-from app.schemas.prediction import (
-    PredictionResult,
-    PredictPriceRequest,
-    PredictPriceResponse,
-)
+from app.schemas.prediction import PredictPriceRequest, PredictPriceResponse
 from app.schemas.price_trend import PriceTrendResponse
 from app.services.insight_service import InsightService
 from app.services.prediction_service import PredictionService
 from app.services.preference_service import PreferenceService
 from app.services.price_trend_service import PriceTrendService
+from fastapi import APIRouter, BackgroundTasks, Depends, Query, status
 
 logger = logging.getLogger(__name__)
 

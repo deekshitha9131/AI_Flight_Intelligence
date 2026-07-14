@@ -17,10 +17,11 @@ Usage::
     from ml.data.cleaner import DataCleaner
     cleaned_df = DataCleaner().clean(raw_df)
 """
+
 from __future__ import annotations
 
-import pandas as pd
 import numpy as np
+import pandas as pd
 
 from ml.config.settings import (
     CABIN_CLASSES,
@@ -83,8 +84,15 @@ class DataCleaner:
 
     def _cast_types(self, df: pd.DataFrame) -> pd.DataFrame:
         """Cast columns to their correct dtypes."""
-        int_cols = ["adults", "children", "infants", "stops",
-                    "flight_duration_minutes", "departure_hour", "arrival_hour"]
+        int_cols = [
+            "adults",
+            "children",
+            "infants",
+            "stops",
+            "flight_duration_minutes",
+            "departure_hour",
+            "arrival_hour",
+        ]
         for col in int_cols:
             if col in df.columns:
                 df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0).astype(int)
@@ -100,8 +108,14 @@ class DataCleaner:
 
     def _standardise_categories(self, df: pd.DataFrame) -> pd.DataFrame:
         """Uppercase and strip categorical string columns."""
-        str_cols = ["origin", "destination", "airline", "cabin_class",
-                    "trip_type", "currency"]
+        str_cols = [
+            "origin",
+            "destination",
+            "airline",
+            "cabin_class",
+            "trip_type",
+            "currency",
+        ]
         for col in str_cols:
             if col in df.columns:
                 df[col] = df[col].astype(str).str.strip().str.upper()
@@ -148,8 +162,11 @@ class DataCleaner:
             "cabin_class": "ECONOMY",
             "trip_type": "ONE_WAY",
             "currency": "USD",
-            "flight_duration_minutes": df["flight_duration_minutes"].median()
-                if "flight_duration_minutes" in df.columns else 180,
+            "flight_duration_minutes": (
+                df["flight_duration_minutes"].median()
+                if "flight_duration_minutes" in df.columns
+                else 180
+            ),
             "departure_hour": 8,
             "arrival_hour": 10,
         }
@@ -162,15 +179,27 @@ class DataCleaner:
         df = df.dropna(subset=["price", "departure_date"])
         removed = before - len(df)
         if removed:
-            logger.info("Dropped %d rows with missing price or departure_date.", removed)
+            logger.info(
+                "Dropped %d rows with missing price or departure_date.", removed
+            )
 
         return df
 
     def _remove_duplicates(self, df: pd.DataFrame) -> pd.DataFrame:
         """Remove exact duplicate rows."""
         before = len(df)
-        dup_cols = [c for c in ["origin", "destination", "departure_date",
-                                 "airline", "cabin_class", "adults"] if c in df.columns]
+        dup_cols = [
+            c
+            for c in [
+                "origin",
+                "destination",
+                "departure_date",
+                "airline",
+                "cabin_class",
+                "adults",
+            ]
+            if c in df.columns
+        ]
         df = df.drop_duplicates(subset=dup_cols, keep="first")
         removed = before - len(df)
         if removed:
@@ -192,7 +221,9 @@ class DataCleaner:
         if removed:
             logger.info(
                 "Removed %d price outliers (bounds: %.2f – %.2f).",
-                removed, lower, upper,
+                removed,
+                lower,
+                upper,
             )
         return df
 

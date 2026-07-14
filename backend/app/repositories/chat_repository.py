@@ -3,10 +3,9 @@ from __future__ import annotations
 import logging
 from uuid import UUID
 
+from app.models.chat import ChatConversation, ChatMessage
 from sqlalchemy import func, select, update
 from sqlalchemy.orm import Session
-
-from app.models.chat import ChatConversation, ChatMessage
 
 logger = logging.getLogger(__name__)
 

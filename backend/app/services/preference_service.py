@@ -6,12 +6,11 @@ import statistics
 from collections import Counter
 from uuid import UUID
 
-from sqlalchemy.orm import Session
-
 from app.exceptions.base import NotFoundException
 from app.repositories.preference_repository import PreferenceRepository
 from app.repositories.search_history_repository import SearchHistoryRepository
 from app.schemas.insights import UserPreferenceItem, UserPreferenceResponse
+from sqlalchemy.orm import Session
 
 logger = logging.getLogger(__name__)
 

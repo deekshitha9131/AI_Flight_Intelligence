@@ -4,11 +4,10 @@ import logging
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy.orm import Session
-
 from app.integrations.amadeus.client import AmadeusClient
 from app.models.flight_search import FlightSearch
 from app.schemas.flight import FlightSearchParams
+from sqlalchemy.orm import Session
 
 logger = logging.getLogger(__name__)
 

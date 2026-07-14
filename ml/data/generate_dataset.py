@@ -17,6 +17,7 @@ Usage::
 
     python -m ml.data.generate_dataset --rows 10000 --output ml/data/raw/flights_raw.csv
 """
+
 from __future__ import annotations
 
 import argparse
@@ -33,8 +34,8 @@ from ml.config.settings import (
     CABIN_CLASSES,
     CURRENCIES,
     IATA_CODES,
-    RAW_DATASET_CSV,
     RANDOM_SEED,
+    RAW_DATASET_CSV,
     SYNTHETIC_DATASET_SIZE,
     TRIP_TYPES,
 )
@@ -47,9 +48,21 @@ _CABIN_MULT = {"ECONOMY": 1.0, "PREMIUM_ECONOMY": 1.65, "BUSINESS": 3.3, "FIRST"
 
 # Airline tier multipliers (premium vs budget)
 _AIRLINE_TIER: dict[str, float] = {
-    "EK": 1.3, "QR": 1.3, "SQ": 1.25, "BA": 1.2, "LH": 1.15, "AF": 1.15,
-    "AI": 1.0, "UA": 1.1, "AA": 1.1, "DL": 1.1,
-    "6E": 0.75, "SG": 0.75, "UK": 0.8, "IX": 0.8, "WN": 0.8,
+    "EK": 1.3,
+    "QR": 1.3,
+    "SQ": 1.25,
+    "BA": 1.2,
+    "LH": 1.15,
+    "AF": 1.15,
+    "AI": 1.0,
+    "UA": 1.1,
+    "AA": 1.1,
+    "DL": 1.1,
+    "6E": 0.75,
+    "SG": 0.75,
+    "UK": 0.8,
+    "IX": 0.8,
+    "WN": 0.8,
 }
 
 # Monthly seasonality index (1 = average)
@@ -59,7 +72,9 @@ _MONTH_FACTOR = [1.0, 0.9, 0.95, 1.0, 1.05, 1.1, 1.15, 1.2, 0.95, 0.9, 0.95, 1.3
 _DOMESTIC_ORIGINS = {"DEL", "BOM", "HYD", "BLR", "MAA", "CCU", "AMD", "PNQ"}
 
 
-def generate_dataset(n_rows: int = SYNTHETIC_DATASET_SIZE, seed: int = RANDOM_SEED) -> pd.DataFrame:
+def generate_dataset(
+    n_rows: int = SYNTHETIC_DATASET_SIZE, seed: int = RANDOM_SEED
+) -> pd.DataFrame:
     """Generate a synthetic flight price dataset.
 
     Args:
@@ -81,9 +96,7 @@ def generate_dataset(n_rows: int = SYNTHETIC_DATASET_SIZE, seed: int = RANDOM_SE
         origin = rng.choice(IATA_CODES)
         destination = rng.choice([c for c in IATA_CODES if c != origin])
         airline = rng.choice(AIRLINES)
-        cabin_class = rng.choices(
-            CABIN_CLASSES, weights=[60, 15, 20, 5], k=1
-        )[0]
+        cabin_class = rng.choices(CABIN_CLASSES, weights=[60, 15, 20, 5], k=1)[0]
         trip_type = rng.choices(TRIP_TYPES, weights=[55, 45], k=1)[0]
         currency = rng.choices(CURRENCIES, weights=[40, 20, 10, 15, 8, 4, 3], k=1)[0]
         adults = rng.choices([1, 2, 3, 4], weights=[50, 30, 12, 8], k=1)[0]
@@ -119,33 +132,37 @@ def generate_dataset(n_rows: int = SYNTHETIC_DATASET_SIZE, seed: int = RANDOM_SE
             rng=rng,
         )
 
-        rows.append({
-            "origin": origin,
-            "destination": destination,
-            "departure_date": departure_date.isoformat(),
-            "return_date": return_date.isoformat() if return_date else None,
-            "airline": airline,
-            "cabin_class": cabin_class,
-            "adults": adults,
-            "children": children,
-            "infants": infants,
-            "stops": stops,
-            "trip_type": trip_type,
-            "currency": currency,
-            "flight_duration_minutes": flight_duration_minutes,
-            "departure_hour": departure_hour,
-            "arrival_hour": arrival_hour,
-            "price": round(price, 2),
-        })
+        rows.append(
+            {
+                "origin": origin,
+                "destination": destination,
+                "departure_date": departure_date.isoformat(),
+                "return_date": return_date.isoformat() if return_date else None,
+                "airline": airline,
+                "cabin_class": cabin_class,
+                "adults": adults,
+                "children": children,
+                "infants": infants,
+                "stops": stops,
+                "trip_type": trip_type,
+                "currency": currency,
+                "flight_duration_minutes": flight_duration_minutes,
+                "departure_hour": departure_hour,
+                "arrival_hour": arrival_hour,
+                "price": round(price, 2),
+            }
+        )
 
     df = pd.DataFrame(rows)
     logger.info("Dataset generated: %d rows, %d columns.", len(df), len(df.columns))
     return df
 
 
-def _estimate_duration(origin: str, destination: str, stops: int, rng: random.Random) -> int:
+def _estimate_duration(
+    origin: str, destination: str, stops: int, rng: random.Random
+) -> int:
     """Estimate flight duration in minutes based on route hash and stops."""
-    base = abs(hash(f"{origin}{destination}")) % 600 + 60   # 60–660 min
+    base = abs(hash(f"{origin}{destination}")) % 600 + 60  # 60–660 min
     stop_penalty = stops * rng.randint(60, 120)
     return base + stop_penalty
 

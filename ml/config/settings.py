@@ -6,6 +6,7 @@ Central configuration for the ML pipeline.
 All paths, hyperparameters, feature lists, and MLflow settings live here.
 Import this module anywhere in the pipeline instead of hard-coding values.
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -14,8 +15,8 @@ from pathlib import Path
 # Root paths
 # ---------------------------------------------------------------------------
 
-ML_ROOT = Path(__file__).resolve().parents[1]          # ml/
-REPO_ROOT = ML_ROOT.parent                              # project root
+ML_ROOT = Path(__file__).resolve().parents[1]  # ml/
+REPO_ROOT = ML_ROOT.parent  # project root
 
 DATA_DIR = ML_ROOT / "data"
 RAW_DIR = DATA_DIR / "raw"
@@ -55,8 +56,8 @@ EDA_REPORT_FILE = ARTIFACTS_DIR / "eda_report.json"
 # ---------------------------------------------------------------------------
 
 RANDOM_SEED: int = 42
-TEST_SIZE: float = 0.20          # 80 / 20 split
-CV_FOLDS: int = 5                # cross-validation folds
+TEST_SIZE: float = 0.20  # 80 / 20 split
+CV_FOLDS: int = 5  # cross-validation folds
 TARGET_COLUMN: str = "price"
 
 # ---------------------------------------------------------------------------
@@ -193,20 +194,72 @@ OPTIONAL_MODEL_PACKAGES: tuple[str, ...] = ("xgboost", "lightgbm")
 SYNTHETIC_DATASET_SIZE: int = 10_000
 
 IATA_CODES: list[str] = [
-    "DEL", "BOM", "HYD", "BLR", "MAA", "CCU", "AMD", "PNQ",
-    "DXB", "AUH", "DOH", "KWI", "BAH", "MCT",
-    "LHR", "CDG", "FRA", "AMS", "MAD", "FCO", "ZRH",
-    "JFK", "LAX", "ORD", "DFW", "MIA", "SFO",
-    "SIN", "BKK", "KUL", "CGK", "MNL", "HKG", "NRT", "ICN",
-    "SYD", "MEL", "DPS",
+    "DEL",
+    "BOM",
+    "HYD",
+    "BLR",
+    "MAA",
+    "CCU",
+    "AMD",
+    "PNQ",
+    "DXB",
+    "AUH",
+    "DOH",
+    "KWI",
+    "BAH",
+    "MCT",
+    "LHR",
+    "CDG",
+    "FRA",
+    "AMS",
+    "MAD",
+    "FCO",
+    "ZRH",
+    "JFK",
+    "LAX",
+    "ORD",
+    "DFW",
+    "MIA",
+    "SFO",
+    "SIN",
+    "BKK",
+    "KUL",
+    "CGK",
+    "MNL",
+    "HKG",
+    "NRT",
+    "ICN",
+    "SYD",
+    "MEL",
+    "DPS",
 ]
 
 AIRLINES: list[str] = [
-    "AI", "6E", "SG", "UK", "IX",          # Indian carriers
-    "EK", "EY", "QR", "WY", "GF",          # Gulf carriers
-    "BA", "LH", "AF", "KL", "IB", "LX",    # European carriers
-    "AA", "UA", "DL", "WN",                 # US carriers
-    "SQ", "TG", "MH", "GA", "PR",          # Asian carriers
+    "AI",
+    "6E",
+    "SG",
+    "UK",
+    "IX",  # Indian carriers
+    "EK",
+    "EY",
+    "QR",
+    "WY",
+    "GF",  # Gulf carriers
+    "BA",
+    "LH",
+    "AF",
+    "KL",
+    "IB",
+    "LX",  # European carriers
+    "AA",
+    "UA",
+    "DL",
+    "WN",  # US carriers
+    "SQ",
+    "TG",
+    "MH",
+    "GA",
+    "PR",  # Asian carriers
 ]
 
 CABIN_CLASSES: list[str] = ["ECONOMY", "PREMIUM_ECONOMY", "BUSINESS", "FIRST"]

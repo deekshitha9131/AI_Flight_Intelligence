@@ -3,10 +3,9 @@ from __future__ import annotations
 import logging
 from uuid import UUID
 
+from app.models.flight_search import FlightSearch
 from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session
-
-from app.models.flight_search import FlightSearch
 
 logger = logging.getLogger(__name__)
 

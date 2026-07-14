@@ -4,9 +4,8 @@ import secrets
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
-from jose import JWTError, jwt
-
 from app.core.config import get_settings
+from jose import JWTError, jwt
 
 settings = get_settings()
 
@@ -22,6 +21,7 @@ def create_access_token(
         "sub": user_id,
         "email": email,
         "role": role,
+        "jti": secrets.token_hex(8),
         "iat": int(now.timestamp()),
         "exp": int(expires.timestamp()),
     }
@@ -64,4 +64,3 @@ def decode_refresh_token(*, token: str) -> dict[str, Any]:
     if payload.get("type") != "refresh":
         raise ValueError("Invalid refresh token")
     return payload
-

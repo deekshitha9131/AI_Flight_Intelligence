@@ -41,14 +41,13 @@ load_dotenv(BASE_DIR / ".env", override=True)
 
 import pytest
 import pytest_asyncio
+from app.database.base import Base
+from app.database.session import get_db
+from app.main import app as fastapi_app
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy import create_engine, event
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session, sessionmaker
-
-from app.database.base import Base
-from app.database.session import get_db
-from app.main import app as fastapi_app
 
 # ---------------------------------------------------------------------------
 # Test database URL — must be set in the environment before running tests.

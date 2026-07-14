@@ -28,10 +28,9 @@ from datetime import datetime, timedelta, timezone
 from typing import Any
 
 import pytest
+from app.core.config import get_settings
 from httpx import AsyncClient
 from jose import jwt
-
-from app.core.config import get_settings
 
 settings = get_settings()
 
@@ -124,7 +123,6 @@ class TestLogin:
         response = await _login(client, payload["email"], "BadPass@1")
 
         message = response.json()["message"]
-        assert "email" not in message.lower() or "password" not in message.lower()
         # Both cases return the same generic message
         assert "Invalid email or password" in message
 

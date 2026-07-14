@@ -18,6 +18,7 @@ Usage::
     from ml.data.validator import DataValidator
     report = DataValidator().validate(df)
 """
+
 from __future__ import annotations
 
 import json
@@ -167,7 +168,17 @@ class DataValidator:
 
         # 6. Duplicate records
         if len(df) > 0:
-            dup_cols = [c for c in ["origin", "destination", "departure_date", "airline", "cabin_class"] if c in df.columns]
+            dup_cols = [
+                c
+                for c in [
+                    "origin",
+                    "destination",
+                    "departure_date",
+                    "airline",
+                    "cabin_class",
+                ]
+                if c in df.columns
+            ]
             if dup_cols:
                 dup_count = df.duplicated(subset=dup_cols).sum()
                 if dup_count > 0:
@@ -219,6 +230,8 @@ class DataValidator:
 
         logger.info(
             "Validation complete: %d valid, %d invalid, passed=%s",
-            report.valid_rows, report.invalid_rows, report.passed,
+            report.valid_rows,
+            report.invalid_rows,
+            report.passed,
         )
         return report

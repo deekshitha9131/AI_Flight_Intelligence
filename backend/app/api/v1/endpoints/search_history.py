@@ -3,9 +3,6 @@ from __future__ import annotations
 import logging
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Query, status
-from sqlalchemy.orm import Session
-
 from app.database.session import get_db
 from app.dependencies.auth import get_current_user
 from app.models.user import User
@@ -16,6 +13,8 @@ from app.schemas.search_history import (
     SearchHistoryListResponse,
 )
 from app.services.search_history_service import SearchHistoryService
+from fastapi import APIRouter, Depends, Query, status
+from sqlalchemy.orm import Session
 
 logger = logging.getLogger(__name__)
 

@@ -4,10 +4,9 @@ import hashlib
 from datetime import datetime, timezone
 from uuid import UUID
 
+from app.models.refresh_token import RefreshToken
 from sqlalchemy import select
 from sqlalchemy.orm import Session
-
-from app.models.refresh_token import RefreshToken
 
 
 def hash_refresh_token(token: str) -> str:

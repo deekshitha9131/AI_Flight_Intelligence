@@ -1,4 +1,5 @@
 """Incremental, validated imports for historical flight-price datasets."""
+
 from __future__ import annotations
 
 import json
@@ -33,18 +34,26 @@ class DatasetImporter:
         return self._normalise(frame)
 
     def import_api(
-        self, url: str, *, params: dict[str, Any] | None = None,
+        self,
+        url: str,
+        *,
+        params: dict[str, Any] | None = None,
         headers: dict[str, str] | None = None,
     ) -> tuple[pd.DataFrame, ValidationReport]:
         """Fetch a JSON array or a JSON object containing a ``data`` array."""
         response = httpx.get(url, params=params, headers=headers, timeout=30.0)
         response.raise_for_status()
         payload = response.json()
-        records: Iterable[dict[str, Any]] = payload.get("data", []) if isinstance(payload, dict) else payload
+        records: Iterable[dict[str, Any]] = (
+            payload.get("data", []) if isinstance(payload, dict) else payload
+        )
         return self._normalise(pd.DataFrame(records))
 
     def append_incremental(
-        self, frame: pd.DataFrame, *, dataset_name: str = "flights_raw.csv",
+        self,
+        frame: pd.DataFrame,
+        *,
+        dataset_name: str = "flights_raw.csv",
     ) -> Path:
         """Append only unseen rows and retain rejected records for auditability."""
         target = RAW_DIR / dataset_name
@@ -59,7 +68,14 @@ class DatasetImporter:
     def _normalise(self, frame: pd.DataFrame) -> tuple[pd.DataFrame, ValidationReport]:
         frame = frame.copy()
         frame.columns = [str(column).strip().lower() for column in frame.columns]
-        for column in ("origin", "destination", "airline", "cabin_class", "trip_type", "currency"):
+        for column in (
+            "origin",
+            "destination",
+            "airline",
+            "cabin_class",
+            "trip_type",
+            "currency",
+        ):
             if column in frame:
                 frame[column] = frame[column].astype("string").str.strip().str.upper()
         report = self._validator.validate(frame)

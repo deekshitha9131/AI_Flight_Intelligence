@@ -35,3 +35,5 @@ Thumbs.db
 
 # Alembic cache
 backend/alembic/__pycache__/
+
+frontend/node_modules/

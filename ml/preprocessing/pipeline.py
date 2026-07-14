@@ -14,6 +14,7 @@ Usage::
     X_train_transformed = pipeline.fit_transform(X_train)
     X_test_transformed = pipeline.transform(X_test)
 """
+
 from __future__ import annotations
 
 from sklearn.compose import ColumnTransformer
@@ -41,14 +42,10 @@ def build_preprocessing_pipeline(
     transformers = []
 
     if numerical_cols:
-        transformers.append(
-            ("num", StandardScaler(), numerical_cols)
-        )
+        transformers.append(("num", StandardScaler(), numerical_cols))
 
     if categorical_encoded_cols:
-        transformers.append(
-            ("cat", "passthrough", categorical_encoded_cols)
-        )
+        transformers.append(("cat", "passthrough", categorical_encoded_cols))
 
     pipeline = ColumnTransformer(
         transformers=transformers,

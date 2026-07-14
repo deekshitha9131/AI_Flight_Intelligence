@@ -1,18 +1,33 @@
 from __future__ import annotations
 
+import datetime
 import logging
-from datetime import datetime, timezone
 from typing import Any
 
+from app.exceptions.base import AppException
 from fastapi import Request, status
-from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from sqlalchemy.exc import SQLAlchemyError
 
-from app.exceptions.base import AppException
-
 logger = logging.getLogger(__name__)
+
+
+def _serialise(obj: Any) -> Any:
+    """Recursively convert non-JSON-serialisable types to strings."""
+    if isinstance(obj, (datetime.date, datetime.datetime)):
+        return obj.isoformat()
+    if isinstance(obj, dict):
+        return {k: _serialise(v) for k, v in obj.items()}
+    if isinstance(obj, (list, tuple)):
+        return [_serialise(i) for i in obj]
+    try:
+        import json
+
+        json.dumps(obj)
+        return obj
+    except (TypeError, ValueError):
+        return str(obj)
 
 
 def build_error_response(
@@ -28,11 +43,11 @@ def build_error_response(
         "success": False,
         "message": message,
         "error": error,
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
         "path": request.url.path,
     }
     if details:
-        payload["details"] = details
+        payload["details"] = _serialise(details)
     return JSONResponse(status_code=status_code, content=payload)
 
 

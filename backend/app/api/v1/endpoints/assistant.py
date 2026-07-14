@@ -3,8 +3,6 @@ from __future__ import annotations
 import logging
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Query, status
-
 from app.dependencies.ai import get_assistant_service
 from app.dependencies.auth import get_current_user
 from app.models.user import User
@@ -16,6 +14,7 @@ from app.schemas.assistant import (
     DeleteConversationResponse,
 )
 from app.services.assistant_service import AssistantService
+from fastapi import APIRouter, Depends, Query, status
 
 logger = logging.getLogger(__name__)
 

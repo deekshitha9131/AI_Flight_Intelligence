@@ -4,12 +4,6 @@ import logging
 from contextlib import asynccontextmanager
 from typing import Any
 
-from fastapi import FastAPI
-from fastapi.exceptions import RequestValidationError
-from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy.exc import SQLAlchemyError
-from starlette.exceptions import HTTPException as StarletteHTTPException
-
 from app.ai.llm_provider import build_llm_provider
 from app.ai.model_loader import ModelLoader
 from app.api.v1.endpoints.health import router as health_router
@@ -29,6 +23,11 @@ from app.exceptions.handlers import (
 from app.integrations.amadeus.client import AmadeusClient
 from app.middleware.process_time import ProcessTimeMiddleware
 from app.middleware.request_logging import RequestLoggingMiddleware
+from fastapi import FastAPI
+from fastapi.exceptions import RequestValidationError
+from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy.exc import SQLAlchemyError
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
