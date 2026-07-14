@@ -40,7 +40,9 @@ class Settings(BaseSettings):
     # Cache
     redis_url: str = Field(default="redis://localhost:6379")
 
-    cors_origins: str = Field(default="http://localhost:3000")
+    cors_origins: str = Field(
+        default="http://localhost:3000,http://localhost:5173,http://127.0.0.1:3000,http://127.0.0.1:5173"
+    )
 
     # Amadeus
     amadeus_api_key: str = Field(default="")

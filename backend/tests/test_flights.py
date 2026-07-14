@@ -15,6 +15,7 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 from app.dependencies.amadeus import get_amadeus_client
 from app.integrations.amadeus.exceptions import (
+    AmadeusAuthException,
     AmadeusNotFoundException,
     AmadeusRateLimitException,
 )
@@ -245,6 +246,25 @@ class TestFlightSearchSuccess:
     ) -> None:
         mock = MagicMock()
         mock.request = AsyncMock(side_effect=AmadeusRateLimitException())
+        app.dependency_overrides[get_amadeus_client] = lambda: mock
+
+        response = await client.get(
+            "/api/v1/flights/search",
+            params={
+                "origin": "HYD",
+                "destination": "DXB",
+                "departure_date": "2030-12-01",
+            },
+            headers=auth_headers,
+        )
+        app.dependency_overrides.pop(get_amadeus_client, None)
+        assert response.status_code == 502
+
+    async def test_amadeus_auth_failure_returns_502(
+        self, client: AsyncClient, auth_headers: dict, app
+    ) -> None:
+        mock = MagicMock()
+        mock.request = AsyncMock(side_effect=AmadeusAuthException())
         app.dependency_overrides[get_amadeus_client] = lambda: mock
 
         response = await client.get(

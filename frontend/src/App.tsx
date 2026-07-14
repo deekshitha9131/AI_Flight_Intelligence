@@ -6,16 +6,122 @@ import { useAuthStore } from "./store/auth";
 import type { Envelope, Flight, Prediction, Tokens, User } from "./types";
 
 const today = new Date().toISOString().slice(0, 10);
+type RegisterPayload = { first_name: string; last_name: string; email: string; password: string };
+type Recommendation = { origin: string; destination: string; estimated_price: number; currency: string; reason: string };
 const Protected = ({ children }: { children: JSX.Element }) => useAuthStore((s) => s.tokens) ? children : <Navigate to="/login" replace />;
 
 function Header() { const { user, logout } = useAuthStore(); return <header><Link to="/" className="brand">✈ AI Flight</Link><nav><Link to="/search">Search</Link><Link to="/predict">Price AI</Link><Link to="/recommendations">Discover</Link><Link to="/assistant">Assistant</Link>{user ? <button onClick={logout}>Sign out</button> : <Link to="/login">Sign in</Link>}</nav></header>; }
 function SearchForm({ compact = false }: { compact?: boolean }) { const navigate = useNavigate(); const [origin, setOrigin] = useState("HYD"); const [destination, setDestination] = useState("DXB"); const [departure, setDeparture] = useState(today); const submit = (event: FormEvent) => { event.preventDefault(); navigate(`/search?origin=${origin}&destination=${destination}&departure_date=${departure}`); }; return <form className={compact ? "search compact" : "search"} onSubmit={submit}><label>From<input aria-label="Origin airport" value={origin} maxLength={3} onChange={(e) => setOrigin(e.target.value.toUpperCase())}/></label><label>To<input aria-label="Destination airport" value={destination} maxLength={3} onChange={(e) => setDestination(e.target.value.toUpperCase())}/></label><label>Departure<input aria-label="Departure date" type="date" min={today} value={departure} onChange={(e) => setDeparture(e.target.value)}/></label><button>Search flights</button></form>; }
 function Home() { return <><section className="hero"><p className="eyebrow">Predict. Compare. Fly smarter.</p><h1>Every journey starts with a better fare.</h1><p>Real-time flights, price intelligence, and travel advice in one calm workspace.</p><SearchForm/><div className="stats"><span>AI price forecasts</span><span>Personalised trips</span><span>24/7 travel assistant</span></div></section><section><h2>Designed around your next destination</h2><div className="grid"><article>Price prediction<br/><small>Know the likely fare before you book.</small></article><article>Smart recommendations<br/><small>Routes shaped by your history and budget.</small></article><article>Travel assistant<br/><small>Helpful guidance whenever you need it.</small></article></div></section></>; }
 function Login() { const navigate = useNavigate(); const setTokens = useAuthStore((s) => s.setTokens); const setUser = useAuthStore((s) => s.setUser); const [error, setError] = useState(""); const login = useMutation({ mutationFn: (values: {email:string;password:string}) => client.post<Envelope<Tokens>>("/auth/login", values), onSuccess: async ({ data }) => { setTokens(data.data); const me = await client.get<Envelope<User>>("/auth/me"); setUser(me.data.data); navigate("/dashboard"); }, onError: () => setError("Unable to sign in. Check your details and try again.") }); return <section className="auth"><h1>Welcome back</h1><form onSubmit={(e) => { e.preventDefault(); const form = new FormData(e.currentTarget); login.mutate({ email: String(form.get("email")), password: String(form.get("password")) }); }}><label>Email<input name="email" type="email" required /></label><label>Password<input name="password" type="password" minLength={8} required /></label>{error && <p role="alert">{error}</p>}<button disabled={login.isPending}>{login.isPending ? "Signing in…" : "Sign in"}</button></form><p>New here? <Link to="/register">Create an account</Link></p></section>; }
-function Register() { return <section className="auth"><h1>Create your account</h1><p>Registration is available through the API. Use this form to get started.</p><form onSubmit={async(e) => { e.preventDefault(); const f=new FormData(e.currentTarget); await client.post("/auth/register", Object.fromEntries(f)); location.href="/login"; }}><label>First name<input name="first_name" required/></label><label>Last name<input name="last_name" required/></label><label>Email<input name="email" type="email" required/></label><label>Password<input name="password" type="password" minLength={8} required/></label><button>Create account</button></form></section>; }
-function Search() { const params = new URLSearchParams(location.search); const enabled = Boolean(params.get("origin")); const query = useQuery({ queryKey:["flights", location.search], enabled, queryFn: async() => (await client.get<Envelope<Flight[]> & {count:number}>("/flights/search", { params: {...Object.fromEntries(params), adults:1, children:0, infants:0, travel_class:"ECONOMY", currency:"USD", non_stop:false, max_results:10} })).data }); return <section><h1>Find a flight</h1><SearchForm compact/>{query.isLoading && <p>Looking for the best options…</p>}{query.isError && <p role="alert">We could not retrieve flights. Please retry.</p>}<div className="results">{query.data?.data.map((flight) => <article key={flight.flight_id}><div><b>{flight.origin} → {flight.destination}</b><p>{new Date(flight.departure_time).toLocaleString()} · {flight.duration} · {flight.stops ? `${flight.stops} stop(s)` : "Non-stop"}</p><small>{flight.segments[0]?.airline_name ?? flight.segments[0]?.airline}</small></div><strong>{flight.currency} {flight.price.toFixed(2)}</strong></article>)}</div></section>; }
+function Register() {
+  const navigate = useNavigate();
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+  const register = useMutation({
+    mutationFn: (values: RegisterPayload) => client.post<Envelope<{ id: string; first_name: string; last_name: string; email: string; is_verified: boolean }>>("/auth/register", values),
+    onSuccess: () => {
+      setError("");
+      setSuccess("Account created. You can sign in now.");
+      window.setTimeout(() => navigate("/login"), 700);
+    },
+    onError: (err: unknown) => {
+      const responseData = (err as { response?: { data?: { message?: string; error?: string; detail?: string } } }).response?.data;
+      const message = responseData?.message || responseData?.error || responseData?.detail || (err instanceof Error ? err.message : "We could not create your account right now.");
+      setSuccess("");
+      setError(message);
+    },
+  });
+
+  return (
+    <section className="auth">
+      <h1>Create your account</h1>
+      <p>Registration is available through the API. Use this form to get started.</p>
+      <form
+        onSubmit={(event) => {
+          event.preventDefault();
+          const form = new FormData(event.currentTarget);
+          register.mutate({
+            first_name: String(form.get("first_name") ?? ""),
+            last_name: String(form.get("last_name") ?? ""),
+            email: String(form.get("email") ?? ""),
+            password: String(form.get("password") ?? ""),
+          });
+        }}
+      >
+        <label>First name<input name="first_name" required /></label>
+        <label>Last name<input name="last_name" required /></label>
+        <label>Email<input name="email" type="email" required /></label>
+        <label>Password<input name="password" type="password" minLength={8} required /></label>
+        <p><small>Use at least 8 characters, including uppercase, lowercase, a number, and a symbol.</small></p>
+        {error && <p role="alert">{error}</p>}
+        {success && <p>{success}</p>}
+        <button disabled={register.isPending}>{register.isPending ? "Creating account…" : "Create account"}</button>
+      </form>
+    </section>
+  );
+}
+function Search() {
+  const params = new URLSearchParams(location.search);
+  const enabled = Boolean(params.get("origin"));
+  const query = useQuery({
+    queryKey: ["flights", location.search],
+    enabled,
+    queryFn: async () => {
+      const response = await client.get<Envelope<Flight[]> & { count: number; message?: string }>("/flights/search", {
+        params: {
+          ...Object.fromEntries(params),
+          adults: 1,
+          children: 0,
+          infants: 0,
+          travel_class: "ECONOMY",
+          currency: "USD",
+          non_stop: false,
+          max_results: 10,
+        },
+      });
+      return response.data;
+    },
+  });
+
+  const errorMessage = query.error instanceof Error && "response" in (query.error as { response?: { data?: { message?: string } } })
+    ? (query.error as { response?: { data?: { message?: string } } }).response?.data?.message
+    : undefined;
+
+  return (
+    <section>
+      <h1>Find a flight</h1>
+      <SearchForm compact />
+      {query.isLoading && <p>Looking for the best options…</p>}
+      {query.isError && <p role="alert">{errorMessage ?? "We could not retrieve flights. Please retry."}</p>}
+      {!query.isLoading && !query.isError && query.data?.data.length === 0 && <p>No flights matched this search yet.</p>}
+      <div className="results">
+        {query.data?.data.map((flight) => (
+          <article key={flight.flight_id}>
+            <div>
+              <b>{flight.origin} → {flight.destination}</b>
+              <p>{new Date(flight.departure_time).toLocaleString()} · {flight.duration} · {flight.stops ? `${flight.stops} stop(s)` : "Non-stop"}</p>
+              <small>{flight.segments[0]?.airline_name ?? flight.segments[0]?.airline}</small>
+            </div>
+            <strong>{flight.currency} {flight.price.toFixed(2)}</strong>
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+}
 function Predict() { const mutation = useMutation({ mutationFn: async (values: object) => (await client.post<Envelope<Prediction>>("/ai/predict-price", values)).data }); return <section><h1>AI price prediction</h1><form className="predict" onSubmit={(e) => { e.preventDefault(); const f = Object.fromEntries(new FormData(e.currentTarget)); mutation.mutate({...f, adults: Number(f.adults), trip_type:"ONE_WAY", cabin_class:"ECONOMY", currency:"USD"}); }}><label>Origin<input name="origin" defaultValue="HYD" maxLength={3}/></label><label>Destination<input name="destination" defaultValue="DXB" maxLength={3}/></label><label>Departure<input name="departure_date" type="date" min={today} defaultValue={today}/></label><label>Adults<input name="adults" type="number" min="1" defaultValue="1"/></label><button>Forecast fare</button></form>{mutation.data && <article className="forecast"><p>Likely fare</p><h2>{mutation.data.data.currency} {mutation.data.data.predicted_price.toFixed(2)}</h2><p>Range: {mutation.data.data.price_range_low}–{mutation.data.data.price_range_high}</p><p>{mutation.data.data.suggested_booking_window}</p></article>}</section>; }
-function Recommendations() { const query = useQuery({queryKey:["recommendations"],queryFn:async()=> (await client.get<Envelope<Array<{origin:string;destination:string;estimated_price:number;currency:string;reason:string}>>("/recommendations")).data}); return <section><h1>Recommended for you</h1><div className="grid">{query.data?.data.map((item, index)=><article key={index}><h3>{item.origin} → {item.destination}</h3><b>{item.currency} {item.estimated_price.toFixed(2)}</b><p>{item.reason}</p></article>)}</div></section>; }
+function Recommendations() {
+  const query = useQuery({
+    queryKey: ["recommendations"],
+    queryFn: async () => {
+      const response = await client.get<Envelope<Recommendation[]>>("/recommendations");
+      return response.data;
+    },
+  });
+
+  return <section><h1>Recommended for you</h1><div className="grid">{query.data?.data.map((item, index) => <article key={index}><h3>{item.origin} → {item.destination}</h3><b>{item.currency} {item.estimated_price.toFixed(2)}</b><p>{item.reason}</p></article>)}</div></section>;
+}
 function Assistant() { const [messages, setMessages] = useState<Array<{role:string;content:string}>>([]); const send = async(e:FormEvent<HTMLFormElement>)=>{e.preventDefault();const text=String(new FormData(e.currentTarget).get("message"));setMessages((m)=>[...m,{role:"user",content:text}]);e.currentTarget.reset();const r=await client.post<Envelope<{reply:string}>>("/assistant/chat",{message:text});setMessages((m)=>[...m,{role:"assistant",content:r.data.data.reply}]);};return <section><h1>Travel assistant</h1><div className="chat">{messages.length===0&&<p>Try: “When is the cheapest time to fly to Dubai?”</p>}{messages.map((m,i)=><p className={m.role} key={i}>{m.content}</p>)}</div><form className="chat-form" onSubmit={send}><input name="message" aria-label="Message" placeholder="Ask about routes, fares, or baggage" required/><button>Send</button></form></section>; }
 function Dashboard(){const user=useAuthStore(s=>s.user);return <section><h1>Hello, {user?.first_name ?? "traveller"}</h1><div className="grid"><article><h3>Plan a trip</h3><Link to="/search">Search flights</Link></article><article><h3>Price watch</h3><Link to="/predict">Get a prediction</Link></article><article><h3>Discover</h3><Link to="/recommendations">View recommendations</Link></article></div></section>}
 export function App() { return <><Header/><main><Routes><Route path="/" element={<Home/>}/><Route path="/login" element={<Login/>}/><Route path="/register" element={<Register/>}/><Route path="/search" element={<Protected><Search/></Protected>}/><Route path="/predict" element={<Protected><Predict/></Protected>}/><Route path="/recommendations" element={<Protected><Recommendations/></Protected>}/><Route path="/assistant" element={<Protected><Assistant/></Protected>}/><Route path="/dashboard" element={<Protected><Dashboard/></Protected>}/></Routes></main><footer>AI Flight Intelligence · Travel with confidence</footer></>; }

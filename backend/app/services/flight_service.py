@@ -7,7 +7,9 @@ from uuid import UUID
 
 from app.exceptions.base import ExternalAPIException, NotFoundException
 from app.integrations.amadeus.exceptions import (
+    AmadeusAuthException,
     AmadeusConnectionException,
+    AmadeusException,
     AmadeusNotFoundException,
     AmadeusPermissionException,
     AmadeusRateLimitException,
@@ -83,8 +85,18 @@ class FlightService:
             raise ExternalAPIException(
                 message="Flight search is not available with the current API credentials."
             ) from exc
+        except AmadeusAuthException as exc:
+            logger.error("Amadeus authentication failed during flight search: %s", exc)
+            raise ExternalAPIException(
+                message="Flight search is temporarily unavailable because authentication failed."
+            ) from exc
         except AmadeusServerException as exc:
             logger.error("Amadeus server error during flight search: %s", exc)
+            raise ExternalAPIException(
+                message="Flight search service encountered an unexpected error."
+            ) from exc
+        except AmadeusException as exc:
+            logger.error("Unhandled Amadeus error during flight search: %s", exc)
             raise ExternalAPIException(
                 message="Flight search service encountered an unexpected error."
             ) from exc
