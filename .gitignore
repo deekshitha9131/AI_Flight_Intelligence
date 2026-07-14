@@ -37,3 +37,7 @@ Thumbs.db
 backend/alembic/__pycache__/
 
 frontend/node_modules/
+
+structure.txt
+fix.txt
+test.txt
