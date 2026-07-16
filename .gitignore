@@ -15,6 +15,10 @@ frontend/venv/
 .env
 .env.*
 
+.pytest_cache/
+
+.mypy_cache/
+
 # Logs
 logs/
 backend/logs/
@@ -38,6 +42,3 @@ backend/alembic/__pycache__/
 
 frontend/node_modules/
 
-structure.txt
-fix.txt
-test.txt

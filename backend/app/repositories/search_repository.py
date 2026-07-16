@@ -4,62 +4,39 @@ import logging
 from typing import Any
 from uuid import UUID
 
-from app.integrations.amadeus.client import AmadeusClient
+from app.integrations.providers.base import FlightProvider
 from app.models.flight_search import FlightSearch
 from app.schemas.flight import FlightSearchParams
 from sqlalchemy.orm import Session
 
 logger = logging.getLogger(__name__)
 
-_FLIGHT_OFFERS_PATH = "/v2/shopping/flight-offers"
-
 
 class SearchRepository:
     """Repository layer for flight search operations.
 
     Responsibilities:
-    - Own the Amadeus flight-offers endpoint path and parameter mapping.
-    - Return the raw Amadeus response without transformation.
+    - Invoke the configured flight provider for flight-offer requests.
+    - Return the raw provider response without transformation.
     - Persist a FlightSearch history record to the database.
-    - Propagate AmadeusException subclasses unchanged to the service layer.
+    - Propagate provider exceptions unchanged to the service layer.
     """
 
-    def __init__(self, amadeus_client: AmadeusClient, db: Session) -> None:
-        self._amadeus = amadeus_client
+    def __init__(self, provider: FlightProvider, db: Session) -> None:
+        self._provider = provider
         self._db = db
 
     async def fetch_flight_offers(
         self, *, params: FlightSearchParams
     ) -> dict[str, Any]:
-        """Call the Amadeus Flight Offers Search API and return the raw response.
+        """Call the configured flight provider and return the raw response.
 
         Args:
             params: Validated flight search parameters.
 
         Returns:
-            Raw Amadeus API response dict.
-
-        Raises:
-            AmadeusException subclasses — propagated as-is.
+            Raw provider response dict.
         """
-        query: dict[str, Any] = {
-            "originLocationCode": params.origin,
-            "destinationLocationCode": params.destination,
-            "departureDate": params.departure_date.isoformat(),
-            "adults": params.adults,
-            "travelClass": params.travel_class.value,
-            "currencyCode": params.currency,
-            "nonStop": str(params.non_stop).lower(),
-            "max": params.max_results,
-        }
-
-        if params.return_date is not None:
-            query["returnDate"] = params.return_date.isoformat()
-        if params.children:
-            query["children"] = params.children
-        if params.infants:
-            query["infants"] = params.infants
-
         logger.debug(
             "SearchRepository.fetch_flight_offers | origin=%s destination=%s date=%s",
             params.origin,
@@ -67,7 +44,7 @@ class SearchRepository:
             params.departure_date,
         )
 
-        return await self._amadeus.request("GET", _FLIGHT_OFFERS_PATH, params=query)
+        return await self._provider.search_flights(params)
 
     def save_search_history(
         self,

@@ -4,9 +4,10 @@ import logging
 from typing import Annotated
 
 from app.database.session import get_db
-from app.dependencies.amadeus import get_amadeus_client
+from app.dependencies.amadeus import get_amadeus_client, get_flight_provider
 from app.dependencies.auth import get_current_user
 from app.integrations.amadeus.client import AmadeusClient
+from app.integrations.providers.base import FlightProvider
 from app.models.user import User
 from app.repositories.search_repository import SearchRepository
 from app.schemas.flight import FlightSearchParams, FlightSearchResponse, TravelClass
@@ -125,6 +126,7 @@ async def search_flights(
     # --------------------------------------------------------------- injected
     current_user: User = Depends(get_current_user),
     amadeus_client: AmadeusClient = Depends(get_amadeus_client),
+    provider: FlightProvider = Depends(get_flight_provider),
     db: Session = Depends(get_db),
 ) -> FlightSearchResponse:
     """Return available flight offers matching the search criteria."""
@@ -164,7 +166,7 @@ async def search_flights(
             details={"errors": exc.errors()},
         )
 
-    repository = SearchRepository(amadeus_client=amadeus_client, db=db)
+    repository = SearchRepository(provider=provider, db=db)
     service = FlightService(repository=repository)
 
     flights, search_id = await service.search_flights(

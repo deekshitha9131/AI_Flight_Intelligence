@@ -42,22 +42,30 @@ async def lifespan(app: FastAPI) -> Any:
     if check_database_connection():
         logger.info("Database connection healthy")
 
-        # Create all database tables (Development Only)
-        print("=" * 80)
-        for table_name, table in Base.metadata.tables.items():
-            print(f"\nTABLE: {table_name}")
-            for idx in table.indexes:
-                print(f"INDEX: {idx.name} -> {[c.name for c in idx.columns]}")
-        print("=" * 80)
-        Base.metadata.create_all(bind=engine)
-        logger.info("Database tables created successfully")
+        if settings.environment == "production":
+            logger.info("Skipping automatic table creation in production")
+        else:
+            print("=" * 80)
+            for table_name, table in Base.metadata.tables.items():
+                print(f"\nTABLE: {table_name}")
+                for idx in table.indexes:
+                    print(f"INDEX: {idx.name} -> {[c.name for c in idx.columns]}")
+            print("=" * 80)
+            Base.metadata.create_all(bind=engine)
+            logger.info("Database tables created successfully")
 
     else:
         logger.warning("Database connection check failed")
 
-    amadeus_client = AmadeusClient.from_settings()
-    app.state.amadeus = amadeus_client
-    logger.info("AmadeusClient initialised (base_url=%s).", settings.amadeus_base_url)
+    if settings.flight_provider.lower() == "mock":
+        logger.info("Mock Flight Provider Enabled")
+    elif settings.flight_provider.lower() == "amadeus":
+        amadeus_client = AmadeusClient.from_settings()
+        app.state.amadeus = amadeus_client
+        logger.info("Amadeus Flight Provider Enabled")
+        logger.info("AmadeusClient initialised (base_url=%s).", settings.amadeus_base_url)
+    else:
+        raise ValueError("Unsupported FLIGHT_PROVIDER")
 
     model_loader = ModelLoader()
     model_loader.load()
@@ -74,7 +82,8 @@ async def lifespan(app: FastAPI) -> Any:
 
     yield
 
-    await amadeus_client.close()
+    if settings.flight_provider.lower() == "amadeus":
+        await amadeus_client.close()
     logger.info("Shutting down application")
 
 

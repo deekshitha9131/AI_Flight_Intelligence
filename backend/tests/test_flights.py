@@ -13,7 +13,7 @@ from typing import Any
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-from app.dependencies.amadeus import get_amadeus_client
+from app.dependencies.amadeus import get_amadeus_client, get_flight_provider
 from app.integrations.amadeus.exceptions import (
     AmadeusAuthException,
     AmadeusNotFoundException,
@@ -174,6 +174,30 @@ class TestFlightSearchValidation:
 
 
 class TestFlightSearchSuccess:
+    async def test_provider_dependency_override_is_used(
+        self, client: AsyncClient, auth_headers: dict, app
+    ) -> None:
+        mock_provider = MagicMock()
+        mock_provider.search_flights = AsyncMock(return_value=_AMADEUS_FLIGHT_RESPONSE)
+        app.dependency_overrides[get_flight_provider] = lambda: mock_provider
+
+        response = await client.get(
+            "/api/v1/flights/search",
+            params={
+                "origin": "HYD",
+                "destination": "DXB",
+                "departure_date": "2030-12-01",
+            },
+            headers=auth_headers,
+        )
+        app.dependency_overrides.pop(get_flight_provider, None)
+
+        assert response.status_code == 200
+        body = response.json()
+        assert body["success"] is True
+        assert body["count"] == 1
+        assert len(body["data"]) == 1
+
     async def test_successful_search_returns_200(
         self, client: AsyncClient, auth_headers: dict, app
     ) -> None:
