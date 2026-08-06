@@ -1,0 +1,305 @@
+# ==============================================================================
+# Docker Compose — base service definitions.
+# Local development additionally loads docker-compose.override.yml
+# automatically (Compose's default behavior — no -f flag needed).
+# Production deploys layer docker-compose.prod.yml explicitly:
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+# ==============================================================================
+
+networks:
+  # Single bridge network for every service. A solo-developer project at
+  # this scale gains nothing from segmenting frontend/backend networks —
+  # that isolation matters when different teams own different tiers and
+  # you want a hard boundary between them. Here it would only add
+  # cross-network wiring for the reverse proxy to reach both sides.
+  app_network:
+    driver: bridge
+    name: ${COMPOSE_PROJECT_NAME:-ai-email-assistant}_network
+
+volumes:
+  # Named volume for Postgres data files — survives `docker compose down`
+  # (only removed with `docker compose down -v`). This is what makes the
+  # database durable across container recreation/rebuilds.
+  postgres_data:
+    name: ${COMPOSE_PROJECT_NAME:-ai-email-assistant}_postgres_data
+  # Named volume for Redis's append-only file — Redis in this system is
+  # documented as ephemeral/never-authoritative (cache, broker, pub/sub),
+  # but persisting it anyway avoids an unnecessary cold cache and a
+  # dropped-in-flight-task risk on every routine container restart.
+  redis_data:
+    name: ${COMPOSE_PROJECT_NAME:-ai-email-assistant}_redis_data
+
+services:
+  # ------------------------------------------------------------------
+  # PostgreSQL — pgvector-enabled image, per the frozen vector-store
+  # decision (PostgreSQL + pgvector, no separate vector database).
+  # ------------------------------------------------------------------
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: ${COMPOSE_PROJECT_NAME:-ai-email-assistant}-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-ai_email_assistant}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    networks:
+      - app_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-ai_email_assistant}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # ------------------------------------------------------------------
+  # Redis — cache, Celery broker/result backend, pub/sub for websocket
+  # fan-out. Append-only persistence enabled so a routine restart
+  # doesn't silently drop in-flight Celery tasks.
+  # ------------------------------------------------------------------
+  redis:
+    image: redis:7-alpine
+    container_name: ${COMPOSE_PROJECT_NAME:-ai-email-assistant}-redis
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis_data:/data
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    networks:
+      - app_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+
+  # ------------------------------------------------------------------
+  # API — stateless FastAPI service. Horizontally scalable; nothing
+  # here holds session or task state locally.
+  # ------------------------------------------------------------------
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: ${BUILD_TARGET:-development}
+    container_name: ${COMPOSE_PROJECT_NAME:-ai-email-assistant}-api
+    restart: unless-stopped
+    env_file:
+      - ./backend/.env
+    ports:
+      - "${API_PORT:-8000}:8000"
+    networks:
+      - app_network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+  # ------------------------------------------------------------------
+  # Celery workers — one container per queue, matching the segmented
+  # worker-pool rule from the frozen architecture. A slow AI run must
+  # never starve sync, and vice versa; separate containers give each
+  # queue its own process, memory ceiling, and independent scaling.
+  # ------------------------------------------------------------------
+  worker-sync:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: ${BUILD_TARGET:-development}
+    container_name: ${COMPOSE_PROJECT_NAME:-ai-email-assistant}-worker-sync
+    restart: unless-stopped
+    command: celery -A app.core.celery_app worker -Q sync -c 2 --loglevel=info -n sync@%h
+    env_file:
+      - ./backend/.env
+    networks:
+      - app_network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "celery -A app.core.celery_app inspect ping -d sync@$$HOSTNAME || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+  worker-classification:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: ${BUILD_TARGET:-development}
+    container_name: ${COMPOSE_PROJECT_NAME:-ai-email-assistant}-worker-classification
+    restart: unless-stopped
+    command: celery -A app.core.celery_app worker -Q classification -c 2 --loglevel=info -n classification@%h
+    env_file:
+      - ./backend/.env
+    networks:
+      - app_network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "celery -A app.core.celery_app inspect ping -d classification@$$HOSTNAME || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+  # This queue runs the classification-gated single-LLM-call OR full
+  # CrewAI Flow path. Concurrency is deliberately 1 — this is the
+  # most expensive queue in the system, and cost/latency control
+  # depends on never letting it fan out unbounded.
+  worker-ai:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: ${BUILD_TARGET:-development}
+    container_name: ${COMPOSE_PROJECT_NAME:-ai-email-assistant}-worker-ai
+    restart: unless-stopped
+    command: celery -A app.core.celery_app worker -Q ai_orchestration -c 1 --loglevel=info -n ai@%h
+    env_file:
+      - ./backend/.env
+    networks:
+      - app_network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "celery -A app.core.celery_app inspect ping -d ai@$$HOSTNAME || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+  worker-send:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: ${BUILD_TARGET:-development}
+    container_name: ${COMPOSE_PROJECT_NAME:-ai-email-assistant}-worker-send
+    restart: unless-stopped
+    command: celery -A app.core.celery_app worker -Q send -c 2 --loglevel=info -n send@%h
+    env_file:
+      - ./backend/.env
+    networks:
+      - app_network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "celery -A app.core.celery_app inspect ping -d send@$$HOSTNAME || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+  worker-notifications:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: ${BUILD_TARGET:-development}
+    container_name: ${COMPOSE_PROJECT_NAME:-ai-email-assistant}-worker-notifications
+    restart: unless-stopped
+    command: celery -A app.core.celery_app worker -Q notifications -c 2 --loglevel=info -n notifications@%h
+    env_file:
+      - ./backend/.env
+    networks:
+      - app_network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "celery -A app.core.celery_app inspect ping -d notifications@$$HOSTNAME || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+  # ------------------------------------------------------------------
+  # Celery beat — scheduler for periodic jobs (token refresh sweep,
+  # memory refresh, nightly analytics aggregation). Exactly one
+  # instance ever — running two beats double-fires every scheduled job.
+  # ------------------------------------------------------------------
+  celery-beat:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: ${BUILD_TARGET:-development}
+    container_name: ${COMPOSE_PROJECT_NAME:-ai-email-assistant}-celery-beat
+    restart: unless-stopped
+    command: celery -A app.core.celery_app beat --loglevel=info
+    env_file:
+      - ./backend/.env
+    networks:
+      - app_network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  # ------------------------------------------------------------------
+  # Frontend — static build served by its own nginx (production
+  # target) or the Vite dev server (development target, see
+  # docker-compose.override.yml).
+  # ------------------------------------------------------------------
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: ${BUILD_TARGET:-development}
+    container_name: ${COMPOSE_PROJECT_NAME:-ai-email-assistant}-frontend
+    restart: unless-stopped
+    env_file:
+      - ./frontend/.env
+    networks:
+      - app_network
+    depends_on:
+      - api
+
+  # ------------------------------------------------------------------
+  # Reverse proxy — the only service exposed to the host/internet.
+  # Terminates one public entry point, routes /api and /ws to the
+  # API service and everything else to the frontend service.
+  # ------------------------------------------------------------------
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: ${COMPOSE_PROJECT_NAME:-ai-email-assistant}-nginx
+    restart: unless-stopped
+    volumes:
+      - ./infra/docker/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    ports:
+      - "${NGINX_PORT:-80}:80"
+    networks:
+      - app_network
+    depends_on:
+      - api
+      - frontend
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:80/"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s

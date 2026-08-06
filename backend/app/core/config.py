@@ -1,0 +1,226 @@
+"""Typed, validated application settings.
+
+All configuration is environment-sourced (per the frozen configuration
+design). This module is the single place that reads `os.environ` for
+settings values — every other file that needs a config value calls
+`get_settings()` rather than touching the environment directly.
+Loading is fail-fast: if a required variable is missing or malformed,
+the app must refuse to start, not fail later on first use.
+"""
+
+import os
+from functools import lru_cache
+
+from pydantic import Field, ValidationInfo, field_validator, model_validator
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+# Environment-file selection is a necessary exception to "config.py is
+# the only os.environ reader": pydantic-settings needs to know *which*
+# file(s) to load before it can construct Settings from them, which
+# means the active environment name has to be read directly here, one
+# variable, before Settings exists. Nothing else in this module reads
+# os.environ outside this bootstrapping step.
+_ACTIVE_ENV = os.getenv("APP_ENV", "development")
+
+# Base `.env` always loads first; an optional `.env.{environment}`
+# layers on top and overrides matching keys (pydantic-settings applies
+# later files in the tuple last, so later = higher precedence). This is
+# what lets infra/env/.env.staging.example and .env.production.example
+# (from the Docker infrastructure phase) actually mean something at
+# load time, rather than existing only as documentation.
+_ENV_FILES = (".env", f".env.{_ACTIVE_ENV}")
+
+
+class Settings(BaseSettings):
+    """Application settings, sourced from environment variables / `.env` files."""
+
+    model_config = SettingsConfigDict(
+        env_file=_ENV_FILES,
+        env_file_encoding="utf-8",
+        case_sensitive=False,
+        extra="ignore",
+    )
+
+    # --- Application ---
+    app_env: str = Field(default="development", alias="APP_ENV")
+    app_debug: bool = Field(default=False, alias="APP_DEBUG")
+    app_secret_key: str = Field(alias="APP_SECRET_KEY")
+
+    # --- CORS ---
+    # Comma-separated origins in the environment (e.g.
+    # "http://localhost:5173,https://app.example.com"), parsed into a
+    # list via the `cors_origins` property below.
+    cors_origins_raw: str = Field(default="http://localhost:5173", alias="CORS_ORIGINS")
+
+    # --- Database ---
+    database_url: str = Field(alias="DATABASE_URL")
+    database_pool_size: int = Field(default=10, alias="DATABASE_POOL_SIZE")
+    database_max_overflow: int = Field(default=5, alias="DATABASE_MAX_OVERFLOW")
+    database_pool_timeout: int = Field(default=30, alias="DATABASE_POOL_TIMEOUT")
+    database_pool_recycle: int = Field(default=1800, alias="DATABASE_POOL_RECYCLE")
+
+    # --- Redis ---
+    redis_url: str = Field(alias="REDIS_URL")
+    celery_broker_url: str = Field(alias="CELERY_BROKER_URL")
+    celery_result_backend: str = Field(alias="CELERY_RESULT_BACKEND")
+    celery_task_time_limit: int = Field(default=300, alias="CELERY_TASK_TIME_LIMIT")
+    celery_task_soft_time_limit: int = Field(default=240, alias="CELERY_TASK_SOFT_TIME_LIMIT")
+    celery_max_retries: int = Field(default=3, alias="CELERY_MAX_RETRIES")
+    celery_retry_backoff_max: int = Field(default=600, alias="CELERY_RETRY_BACKOFF_MAX")
+
+    # --- Google OAuth ---
+    google_client_id: str = Field(default="", alias="GOOGLE_CLIENT_ID")
+    google_client_secret: str = Field(default="", alias="GOOGLE_CLIENT_SECRET")
+    google_redirect_uri: str = Field(default="", alias="GOOGLE_REDIRECT_URI")
+
+    # --- Frontend / session ---
+    frontend_base_url: str = Field(default="http://localhost:5173", alias="FRONTEND_BASE_URL")
+    session_ttl_seconds: int = Field(default=604800, alias="SESSION_TTL_SECONDS")  # 7 days
+
+    # --- Token encryption ---
+    token_encryption_key: str = Field(alias="TOKEN_ENCRYPTION_KEY")
+
+    # --- LLM provider ---
+    anthropic_api_key: str = Field(default="", alias="ANTHROPIC_API_KEY")
+    llm_classification_model: str = Field(
+        default="claude-haiku-4-5-20251001", alias="LLM_CLASSIFICATION_MODEL"
+    )
+    llm_drafting_model: str = Field(default="claude-sonnet-5", alias="LLM_DRAFTING_MODEL")
+    llm_critique_model: str = Field(default="claude-sonnet-5", alias="LLM_CRITIQUE_MODEL")
+
+    # --- Embeddings ---
+    embedding_model: str = Field(default="text-embedding-3-small", alias="EMBEDDING_MODEL")
+
+    # --- Rate limiting ---
+    rate_limit_per_minute: int = Field(default=60, alias="RATE_LIMIT_PER_MINUTE")
+
+    # ------------------------------------------------------------------
+    # Field-level validation
+    # ------------------------------------------------------------------
+
+    @field_validator("app_env")
+    @classmethod
+    def validate_app_env(cls, value: str) -> str:
+        allowed = {"development", "staging", "production", "test"}
+        if value not in allowed:
+            raise ValueError(f"APP_ENV must be one of {allowed}, got {value!r}")
+        return value
+
+    @field_validator("database_url")
+    @classmethod
+    def validate_database_url(cls, value: str) -> str:
+        if not value.startswith("postgresql"):
+            raise ValueError(
+                "DATABASE_URL must be a PostgreSQL connection string "
+                f"(expected it to start with 'postgresql'), got: {value!r}"
+            )
+        return value
+
+    @field_validator("redis_url", "celery_broker_url", "celery_result_backend")
+    @classmethod
+    def validate_redis_scheme(cls, value: str) -> str:
+        if not value.startswith("redis://") and not value.startswith("rediss://"):
+            raise ValueError(f"Expected a redis:// or rediss:// URL, got: {value!r}")
+        return value
+
+    @field_validator(
+        "database_pool_size",
+        "database_pool_timeout",
+        "database_pool_recycle",
+        "celery_task_time_limit",
+        "celery_task_soft_time_limit",
+        "celery_max_retries",
+        "celery_retry_backoff_max",
+        "session_ttl_seconds",
+    )
+    @classmethod
+    def validate_positive(cls, value: int, info: ValidationInfo) -> int:
+        if value <= 0:
+            raise ValueError(f"{info.field_name} must be a positive integer, got {value}")
+        return value
+
+    @field_validator("database_max_overflow")
+    @classmethod
+    def validate_non_negative(cls, value: int) -> int:
+        if value < 0:
+            raise ValueError(f"DATABASE_MAX_OVERFLOW must be >= 0, got {value}")
+        return value
+
+    @field_validator("cors_origins_raw")
+    @classmethod
+    def validate_cors_origins_not_empty(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("CORS_ORIGINS must not be empty — the frontend origin is required.")
+        return value
+
+    # ------------------------------------------------------------------
+    # Cross-field validation (production safety net)
+    # ------------------------------------------------------------------
+
+    @model_validator(mode="after")
+    def validate_celery_time_limits(self) -> "Settings":
+        if self.celery_task_soft_time_limit >= self.celery_task_time_limit:
+            raise ValueError(
+                "CELERY_TASK_SOFT_TIME_LIMIT must be less than CELERY_TASK_TIME_LIMIT "
+                "— the soft limit exists to let a task clean up before the hard limit "
+                "kills the worker process outright; if they're equal or inverted, "
+                "the soft limit accomplishes nothing."
+            )
+        return self
+
+    @model_validator(mode="after")
+    def validate_production_safety(self) -> "Settings":
+        """Refuse to start with development-shaped config in production.
+
+        These are exactly the mistakes that are cheap to catch at
+        startup and expensive to discover after a real deploy: debug
+        mode leaking stack traces, or a secret still set to the
+        placeholder value from .env.example.
+        """
+        if self.app_env != "production":
+            return self
+
+        if self.app_debug:
+            raise ValueError("APP_DEBUG must be false when APP_ENV=production.")
+
+        placeholder_values = {"change-me", ""}
+        if self.app_secret_key in placeholder_values:
+            raise ValueError("APP_SECRET_KEY must be set to a real secret in production.")
+        if self.token_encryption_key in placeholder_values:
+            raise ValueError("TOKEN_ENCRYPTION_KEY must be set to a real key in production.")
+        if len(self.token_encryption_key) < 16:
+            raise ValueError(
+                "TOKEN_ENCRYPTION_KEY looks too short to be a real encryption key "
+                f"(got {len(self.token_encryption_key)} characters)."
+            )
+        if not self.google_client_id or not self.google_client_secret:
+            raise ValueError(
+                "GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET must be set in production "
+                "— Google login cannot function without them."
+            )
+
+        return self
+
+    # ------------------------------------------------------------------
+    # Derived properties
+    # ------------------------------------------------------------------
+
+    @property
+    def cors_origins(self) -> list[str]:
+        """Parsed CORS origin list, derived from the raw comma-separated env value."""
+        return [origin.strip() for origin in self.cors_origins_raw.split(",") if origin.strip()]
+
+    @property
+    def is_production(self) -> bool:
+        return self.app_env == "production"
+
+
+@lru_cache
+def get_settings() -> Settings:
+    """Return the process-wide cached Settings instance.
+
+    Cached because Settings parses and validates the environment on
+    construction — repeating that on every request would be pure waste
+    for values that never change during the process lifetime.
+    """
+    return Settings()  # type: ignore[call-arg]

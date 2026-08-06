@@ -1,0 +1,61 @@
+# ==============================================================================
+# Docker Compose — production overrides.
+# Applied explicitly (never auto-loaded, unlike the override file):
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+#
+# Contains only what differs from the base file: production build target,
+# no bind mounts, stricter restart policy, and replica counts for the
+# horizontally-scalable services.
+# ==============================================================================
+
+services:
+  api:
+    build:
+      target: production
+    restart: always
+    deploy:
+      replicas: 2
+      restart_policy:
+        condition: any
+
+  worker-sync:
+    build:
+      target: production
+    restart: always
+
+  worker-classification:
+    build:
+      target: production
+    restart: always
+
+  worker-ai:
+    build:
+      target: production
+    restart: always
+    # Deliberately NOT scaled beyond 1 replica here even in production —
+    # concurrency for the most expensive queue is controlled explicitly,
+    # not left to default horizontal scaling.
+
+  worker-send:
+    build:
+      target: production
+    restart: always
+
+  worker-notifications:
+    build:
+      target: production
+    restart: always
+
+  celery-beat:
+    build:
+      target: production
+    restart: always
+    # No replicas field — beat must only ever run as a single instance.
+
+  frontend:
+    build:
+      target: production
+    restart: always
+
+  nginx:
+    restart: always

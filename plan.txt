@@ -1,0 +1,672 @@
+I think you're at a good checkpoint to freeze the architecture and define the rest of the project before writing more code.
+
+Looking at your current structure, Phase 2 has already established the authentication foundation:
+
+* ✅ User domain
+* ✅ OAuth token storage
+* ✅ Google OAuth
+* ✅ Auth service
+* ✅ JWT/security
+* ✅ Auth APIs
+* ✅ Tests
+* ✅ Database migrations
+
+That's exactly where you should stop and plan the remaining phases.
+
+---
+
+# AI Email Assistant (Student Edition) - Build Roadmap
+
+## Goal
+
+Build an AI-powered Gmail assistant that can:
+
+* Connect to Gmail
+* Sync emails
+* Understand emails using AI
+* Retrieve relevant past context (RAG)
+* Generate intelligent reply drafts
+* Let the user approve before sending
+
+Everything else is secondary.
+
+---
+
+# Current Progress
+
+## ✅ Phase 0 — Architecture Freeze
+
+Done
+
+* Product architecture
+* Folder structure
+* System design
+* Simplified architecture
+
+---
+
+## ✅ Phase 1 — Project Foundation
+
+Done
+
+Includes
+
+* FastAPI
+* Docker
+* PostgreSQL
+* Redis
+* Celery
+* SQLAlchemy
+* Alembic
+* Logging
+* CI
+* Testing
+* Health endpoints
+
+---
+
+## ✅ Phase 2 — Authentication
+
+Done
+
+Includes
+
+* User
+* Google OAuth
+* JWT
+* OAuth Tokens
+* Auth Service
+* Auth APIs
+* Tests
+
+---
+
+# Remaining Roadmap
+
+---
+
+# Phase 3 — Gmail Integration
+
+## Goal
+
+Read and send Gmail.
+
+### Build order
+
+### 3.1 Gmail API Client
+
+* Gmail client wrapper
+* API configuration
+* Error handling
+* OAuth integration
+
+---
+
+### 3.2 Initial Mail Sync
+
+Download emails.
+
+Store:
+
+* Subject
+* Sender
+* Recipients
+* Body
+* Date
+* Thread ID
+* Gmail ID
+
+---
+
+### 3.3 Incremental Sync
+
+Instead of downloading everything every time,
+
+only fetch:
+
+* New emails
+* Updated emails
+
+---
+
+### 3.4 Email Parser
+
+Convert Gmail payload into
+
+```
+Email Entity
+```
+
+Handle
+
+* HTML
+* Plain text
+* Multipart
+
+---
+
+### 3.5 Attachment Metadata
+
+Store only
+
+* filename
+* type
+* size
+
+Do NOT download attachments yet.
+
+---
+
+### 3.6 Send Email
+
+Implement
+
+```
+Reply
+Send
+```
+
+through Gmail API.
+
+---
+
+### 3.7 Tests
+
+Test
+
+* Gmail client
+* Sync
+* Parsing
+* Sending
+
+---
+
+# Deliverable
+
+The application can now
+
+```
+Login
+
+↓
+
+Read Inbox
+
+↓
+
+Store Emails
+
+↓
+
+Send Replies
+```
+
+---
+
+# Phase 4 — Email Storage
+
+## Goal
+
+Persist Gmail locally.
+
+### Build
+
+### Email Entity
+
+Contains
+
+* subject
+* sender
+* recipients
+* body
+* labels
+* thread
+
+---
+
+### Thread Entity
+
+Stores
+
+Conversation metadata.
+
+---
+
+### Email Repository
+
+Database operations.
+
+---
+
+### Sync Service
+
+Keeps DB updated.
+
+---
+
+### Search
+
+Simple
+
+```
+subject
+
+sender
+
+body
+```
+
+---
+
+### Pagination
+
+Inbox paging.
+
+---
+
+### Tests
+
+---
+
+Deliverable
+
+Local searchable inbox.
+
+---
+
+# Phase 5 — AI Understanding
+
+This is where the AI starts.
+
+---
+
+### 5.1 Preprocessing
+
+Clean
+
+* HTML
+* Signatures
+* Quoted replies
+
+---
+
+### 5.2 Classification
+
+Examples
+
+```
+Work
+
+Personal
+
+Finance
+
+Spam
+
+Support
+```
+
+---
+
+### 5.3 Intent
+
+Examples
+
+```
+Question
+
+Meeting
+
+Request
+
+FYI
+
+Complaint
+```
+
+---
+
+### 5.4 Urgency
+
+```
+Low
+
+Medium
+
+High
+```
+
+---
+
+### 5.5 Sentiment
+
+```
+Positive
+
+Neutral
+
+Negative
+```
+
+---
+
+### 5.6 Entity Extraction
+
+Extract
+
+* Names
+* Dates
+* Organizations
+* Deadlines
+
+---
+
+### 5.7 Summary
+
+Create short summaries.
+
+---
+
+### 5.8 Confidence
+
+Store AI confidence.
+
+---
+
+Deliverable
+
+Every email has AI metadata.
+
+---
+
+# Phase 6 — RAG
+
+## Goal
+
+Give AI memory.
+
+---
+
+### ChromaDB
+
+---
+
+### Embeddings
+
+---
+
+### Chunking
+
+Past emails only.
+
+---
+
+### Retrieval
+
+Top K similar emails.
+
+---
+
+### Context Builder
+
+Construct prompt context.
+
+---
+
+### Tests
+
+---
+
+Deliverable
+
+AI remembers previous conversations.
+
+---
+
+# Phase 7 — Draft Generation
+
+Notice the change here: **merge the original "CrewAI" and "Draft Generation" phases.**
+
+For a student project, there is little value in treating them as separate milestones.
+
+## Goal
+
+Generate useful reply drafts.
+
+---
+
+### Draft Service
+
+---
+
+### Prompt Templates
+
+---
+
+### Reply Generation
+
+---
+
+### Human Approval
+
+Never auto-send.
+
+---
+
+### Optional CrewAI Enhancement
+
+Only after the basic draft generator works.
+
+Use at most:
+
+* Triage Agent
+* Context Agent
+* Draft Agent
+* Review Agent
+
+If a single LLM pipeline produces good drafts, you can even skip CrewAI initially and add it later as an enhancement.
+
+---
+
+### Tests
+
+---
+
+Deliverable
+
+```
+Email
+
+↓
+
+Retrieve Context
+
+↓
+
+Generate Draft
+
+↓
+
+Approve
+
+↓
+
+Send
+```
+
+---
+
+# Phase 8 — Frontend
+
+## Goal
+
+Create a clean demo interface.
+
+Pages:
+
+* Login
+* Dashboard
+* Inbox
+* Email Detail
+* Draft Editor
+* Settings
+
+No analytics page yet.
+
+---
+
+# Phase 9 — Background Jobs
+
+Only essential workers.
+
+Workers
+
+* Email Sync
+* AI Processing
+* Draft Generation
+* Token Refresh
+
+---
+
+# Phase 10 — Analytics
+
+Very small.
+
+Show
+
+* Emails synced
+* AI summaries generated
+* Drafts created
+* Draft acceptance rate
+
+No complex BI dashboards.
+
+---
+
+# Phase 11 — Production Polish
+
+Improve
+
+* Error handling
+* Logging
+* Performance
+* Security
+* Docker
+
+---
+
+# Phase 12 — Testing
+
+Add
+
+* Unit tests
+* Integration tests
+* End-to-end happy path
+
+Example flow:
+
+```
+Login
+
+↓
+
+Sync
+
+↓
+
+Open Email
+
+↓
+
+Generate Draft
+
+↓
+
+Approve
+
+↓
+
+Send
+```
+
+---
+
+# Phase 13 — Deployment
+
+Deploy
+
+Backend
+
+Frontend
+
+PostgreSQL
+
+Redis
+
+Document environment setup.
+
+---
+
+# Phase 14 — Documentation
+
+Prepare:
+
+* README
+* Architecture
+* API documentation
+* Setup guide
+* Demo guide
+
+---
+
+# Final Project Flow
+
+```text
+Google Login
+      │
+      ▼
+Google OAuth
+      │
+      ▼
+Store User & Tokens
+      │
+      ▼
+Sync Gmail
+      │
+      ▼
+Store Emails in PostgreSQL
+      │
+      ▼
+Preprocess Email
+      │
+      ▼
+AI Classification
+      │
+      ▼
+Generate Embeddings
+      │
+      ▼
+Store in ChromaDB
+      │
+      ▼
+User Opens Email
+      │
+      ▼
+Retrieve Similar Emails
+      │
+      ▼
+Build AI Context
+      │
+      ▼
+Generate Draft
+      │
+      ▼
+User Reviews
+      │
+      ▼
+Send via Gmail API
+```
+
+## Overall recommendation
+
+At this point, I would **freeze the project scope**. Resist the temptation to add features like notifications, Outlook support, team workspaces, advanced analytics, or autonomous sending. Your current trajectory is well aligned with what interviewers expect from a strong AI/backend portfolio project: a focused application with a complete, explainable end-to-end workflow rather than a sprawling feature list. Finish this roadmap before considering any enhancements.

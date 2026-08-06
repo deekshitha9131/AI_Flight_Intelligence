@@ -1,0 +1,33 @@
+# Version control
+.git
+.gitignore
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+.venv/
+venv/
+env/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Secrets — never bake environment values into an image layer
+.env
+.env.*
+!.env.example
+
+# Editor / OS
+.vscode/
+.idea/
+.DS_Store
+*.swp
+
+# Tests are copied selectively where needed; excluded by default to keep
+# production images lean (dev/test stage still gets them via COPY . .
+# since this file only controls what's excludable, not stage-specific
+# copies — kept here for the production build context primarily)

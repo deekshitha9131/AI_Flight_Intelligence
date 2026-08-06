@@ -1,0 +1,92 @@
+# ==============================================================================
+# Docker Compose Override — development only.
+# Automatically merged on top of docker-compose.yml by `docker compose up`
+# with no extra flag needed. This file is what makes local dev fast:
+# bind-mounted source (edit on host, container sees it instantly) and
+# dev-server commands (hot reload) instead of the production build.
+#
+# This file should NOT be included when deploying — production deploys use:
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+# which does not reference this file at all.
+# ==============================================================================
+
+services:
+  api:
+    build:
+      target: development
+    volumes:
+      # Bind-mount the backend source so code edits on the host are picked
+      # up immediately by uvicorn --reload inside the container, with no
+      # rebuild step. The named volume for the virtualenv-equivalent
+      # site-packages is intentionally NOT bind-mounted — dependencies
+      # stay baked into the image layer from the last build.
+      - ./backend:/app
+    environment:
+      APP_ENV: development
+      APP_DEBUG: "true"
+
+  worker-sync:
+    build:
+      target: development
+    volumes:
+      - ./backend:/app
+    environment:
+      APP_ENV: development
+
+  worker-classification:
+    build:
+      target: development
+    volumes:
+      - ./backend:/app
+    environment:
+      APP_ENV: development
+
+  worker-ai:
+    build:
+      target: development
+    volumes:
+      - ./backend:/app
+    environment:
+      APP_ENV: development
+
+  worker-send:
+    build:
+      target: development
+    volumes:
+      - ./backend:/app
+    environment:
+      APP_ENV: development
+
+  worker-notifications:
+    build:
+      target: development
+    volumes:
+      - ./backend:/app
+    environment:
+      APP_ENV: development
+
+  celery-beat:
+    build:
+      target: development
+    volumes:
+      - ./backend:/app
+    environment:
+      APP_ENV: development
+
+  frontend:
+    build:
+      target: development
+    volumes:
+      # Bind-mount frontend source for Vite's hot module reload.
+      # node_modules is excluded from the bind mount via an anonymous
+      # volume so the container's own (Linux-built) node_modules isn't
+      # shadowed by the host's (possibly different-OS) node_modules.
+      - ./frontend:/app
+      - /app/node_modules
+    ports:
+      # Direct access to the Vite dev server, bypassing nginx, so the
+      # browser gets Vite's HMR websocket without an extra proxy hop
+      # during active development.
+      - "${FRONTEND_DEV_PORT:-5173}:5173"
+    environment:
+      NODE_ENV: development
