@@ -18,7 +18,9 @@ composed into the next layer up.
 
 from functools import lru_cache
 from typing import Annotated
-
+from app.application.services.gmail_service import GmailService
+from app.infrastructure.database.repositories.email_repository import EmailRepository
+from app.infrastructure.database.repositories.thread_repository import ThreadRepository
 import httpx
 import redis.asyncio as redis
 from fastapi import Depends, Request
@@ -145,3 +147,33 @@ DbSession = Annotated[AsyncSession, Depends(get_db_session)]
 RedisClient = Annotated[redis.Redis, Depends(get_redis)]
 AppSettings = Annotated[Settings, Depends(get_settings_dependency)]
 CurrentUser = Annotated[User, Depends(get_current_user)]
+
+def get_thread_repository(
+    db: Annotated[AsyncSession, Depends(get_db_session)],
+) -> ThreadRepository:
+    return ThreadRepository(db)
+
+
+def get_email_repository(
+    db: Annotated[AsyncSession, Depends(get_db_session)],
+) -> EmailRepository:
+    return EmailRepository(db)
+
+
+def get_gmail_service(
+    user_repository: Annotated[UserRepository, Depends(get_user_repository)],
+    thread_repository: Annotated[ThreadRepository, Depends(get_thread_repository)],
+    email_repository: Annotated[EmailRepository, Depends(get_email_repository)],
+    settings: Annotated[Settings, Depends(get_settings_dependency)],
+) -> GmailService:
+    # GmailClient itself is intentionally NOT a DI-provided dependency
+    # (unlike GoogleOAuthClient) — it needs a specific user's OAuth
+    # tokens, which GmailService only knows once it's handed a User at
+    # call time, not at request-dependency-resolution time. GmailService
+    # builds it internally (see sync_mailbox) for exactly this reason.
+    return GmailService(
+        user_repository=user_repository,
+        thread_repository=thread_repository,
+        email_repository=email_repository,
+        settings=settings,
+    )

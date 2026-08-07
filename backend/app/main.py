@@ -82,8 +82,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # Ensure pgvector's extension is installed before anything else
     # touches the database — see infrastructure/vector/extension.py for
     # why this is idempotent and safe to run on every startup.
-    async with app.state.db_session_factory() as bootstrap_session:
-        await ensure_pgvector_extension(bootstrap_session)
+    # async with app.state.db_session_factory() as bootstrap_session:
+    #     await ensure_pgvector_extension(bootstrap_session)
 
     redis_client = create_redis_client(settings)
     app.state.redis_client = redis_client

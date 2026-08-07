@@ -1,18 +1,14 @@
 """ORM model registry.
 
-Every SQLAlchemy model in the project must be imported here, e.g.:
-
-    from app.infrastructure.database.models.draft import Draft
-    from app.infrastructure.database.models.thread import Thread
-
-This is not organizational preference — alembic/env.py imports this
-package specifically so `Base.metadata` is fully populated before
-`alembic revision --autogenerate` diffs it against the live database. A
-model defined but never imported here is invisible to autogenerate and
-will be silently treated as if it doesn't exist.
+Every SQLAlchemy model in the project must be imported here — see the
+original module docstring (unchanged) for why this matters to Alembic
+autogenerate.
 """
 
+from app.infrastructure.database.models.attachment import AttachmentModel
+from app.infrastructure.database.models.email import EmailModel
 from app.infrastructure.database.models.oauth_token import OAuthTokenModel
+from app.infrastructure.database.models.thread import ThreadModel
 from app.infrastructure.database.models.user import UserModel
 
-__all__ = ["UserModel", "OAuthTokenModel"]
+__all__ = ["UserModel", "OAuthTokenModel", "ThreadModel", "EmailModel", "AttachmentModel"]

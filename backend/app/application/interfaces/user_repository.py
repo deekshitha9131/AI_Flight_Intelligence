@@ -65,3 +65,12 @@ class IUserRepository(Protocol):
         """Return a user's decrypted tokens, or None if they've never
         connected Gmail."""
         ...
+
+    async def get_gmail_history_id(self, user_id: UUID) -> str | None:
+        """Return the user's last-synced Gmail history ID, or None if no
+        Gmail sync (initial or incremental) has ever completed."""
+        ...
+
+    async def update_gmail_history_id(self, user_id: UUID, history_id: str) -> None:
+        """Persist the newest Gmail history ID after a successful sync."""
+        ...

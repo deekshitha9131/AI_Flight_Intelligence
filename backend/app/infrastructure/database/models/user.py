@@ -8,6 +8,7 @@ outside that repository should ever import this class directly;
 services and routers work with the domain entity.
 """
 
+from sqlalchemy import BigInteger
 from sqlalchemy import Enum as SQLEnum
 from sqlalchemy import String
 from sqlalchemy.orm import Mapped, mapped_column
@@ -32,8 +33,21 @@ class UserModel(Base, UUIDPrimaryKeyMixin, TimestampMixin, SoftDeleteMixin):
     full_name: Mapped[str] = mapped_column(String(255), nullable=False)
     google_sub_id: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
     status: Mapped[UserStatus] = mapped_column(
-        SQLEnum(UserStatus, name="user_status", native_enum=True),
-        nullable=False,
-        default=UserStatus.ACTIVE,
-        server_default=UserStatus.ACTIVE.value,
-    )
+    SQLEnum(
+        UserStatus,
+        name="user_status",
+        native_enum=True,
+        values_callable=lambda enum: [member.value for member in enum],
+    ),
+    nullable=False,
+    default=UserStatus.ACTIVE,
+    server_default=UserStatus.ACTIVE.value,
+)
+    # NULL means "no Gmail initial sync has ever completed for this
+    # user" — GmailService.sync_incremental uses that exact condition
+    # to require an initial sync first (Task 3.4). Deliberately not
+    # part of the framework-agnostic User domain entity — see
+    # UserRepository.get_gmail_history_id/update_gmail_history_id for
+    # why this is exposed as two narrow methods instead, the same
+    # pattern already used for oauth_tokens.
+    gmail_history_id: Mapped[int | None] = mapped_column(BigInteger, nullable=True)

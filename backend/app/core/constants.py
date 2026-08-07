@@ -27,6 +27,7 @@ API_V1_PREFIX: Final[str] = "/api/v1"
 class OpenAPITags:
     HEALTH: Final[str] = "Health"
     AUTH: Final[str] = "Auth"
+    GMAIL: Final[str] = "Gmail"
     THREADS: Final[str] = "Threads"
     DRAFTS: Final[str] = "Drafts"
     CONTACTS: Final[str] = "Contacts"
@@ -69,12 +70,8 @@ OPENAPI_TAGS_METADATA: Final[list[dict[str, str]]] = [
 DEFAULT_PAGE_SIZE: Final[int] = 25
 MAX_PAGE_SIZE: Final[int] = 100
 
-# --- Vector embeddings ---
-# Dimensionality of the configured embedding model (text-embedding-3-small).
-# pgvector columns are fixed-width — this must match whatever model
-# EMBEDDING_MODEL (app/core/config.py) actually produces. If the model
-# ever changes to one with a different output size, every existing
-# embedding column and index needs a migration, not just this constant.
+GMAIL_LIST_PAGE_SIZE: Final[int] = 100
+MAX_MESSAGES_PER_SYNC: Final[int] = 1000
 EMBEDDING_DIMENSIONS: Final[int] = 1536
 
 # --- Health check status values ---
@@ -112,3 +109,4 @@ SESSION_COOKIE_NAME: Final[str] = "session_id"
 # cleared immediately once the callback validates it.
 OAUTH_STATE_COOKIE_NAME: Final[str] = "oauth_state"
 OAUTH_STATE_COOKIE_MAX_AGE_SECONDS: Final[int] = 600  # 10 minutes
+

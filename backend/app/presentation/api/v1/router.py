@@ -8,12 +8,13 @@ directly, so adding a new resource in a later phase means adding one
 
 from fastapi import APIRouter
 
-from app.presentation.api.v1.routers import auth, health
+from app.presentation.api.v1.routers import auth, gmail, health
 
 api_router = APIRouter()
 
 api_router.include_router(health.router)
 api_router.include_router(auth.router)
+api_router.include_router(gmail.router)
 
 # Future phases register their routers the same way, e.g.:
 #   from app.presentation.api.v1.routers import threads, drafts, contacts, settings
