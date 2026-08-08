@@ -22,18 +22,13 @@ _BASE_TIME = datetime(2026, 1, 1, tzinfo=UTC)
 @pytest.fixture
 async def prepared_db(db_engine: AsyncEngine):
     async with db_engine.begin() as conn:
-        await conn.run_sync(
-            Base.metadata.create_all,
-            tables=[
-                UserModel.__table__,
-                ThreadModel.__table__,
-                EmailModel.__table__,
-                AttachmentModel.__table__,
-            ],
-        )
+        await conn.run_sync(Base.metadata.drop_all)
+        await conn.run_sync(Base.metadata.create_all)
+
     yield db_engine
+
     async with db_engine.begin() as conn:
-        await conn.run_sync(Base.metadata.drop_all, tables=[AttachmentModel.__table__, EmailModel.__table__, ThreadModel.__table__, UserModel.__table__])
+        await conn.run_sync(Base.metadata.drop_all)
 
 
 @pytest.fixture

@@ -13,8 +13,9 @@ _MIME_TEXT_HTML = "text/html"
 
 def _decode_base64url(data: str) -> bytes:
     padding_needed = -len(data) % 4
+    padded = data + "=" * padding_needed
     try:
-        return base64.urlsafe_b64decode(data + "=" * padding_needed)
+        return base64.b64decode(padded.replace("-", "+").replace("_", "/"), validate=True)
     except (binascii.Error, ValueError) as exc:
         raise GmailParseError("Failed to decode Base64URL message body data.") from exc
 
@@ -145,4 +146,4 @@ class EmailParser:
             body_text="\n".join(plain_text_chunks) if plain_text_chunks else None,
             body_html="\n".join(html_chunks) if html_chunks else None,
             attachments=attachments,
-        )   
+        )

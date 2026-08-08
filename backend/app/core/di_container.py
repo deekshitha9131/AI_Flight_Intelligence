@@ -17,7 +17,7 @@ from app.infrastructure.cache.session_store import SessionStore
 from app.infrastructure.database.repositories.user_repository import UserRepository
 from app.infrastructure.database.session import get_db_session
 from app.infrastructure.gmail.oauth_client import GoogleOAuthClient
-
+from app.domain.exceptions.auth import SessionNotFoundError
 
 def get_redis(request: Request) -> redis.Redis:  # type: ignore[type-arg]
     
@@ -78,13 +78,21 @@ def get_auth_service(
     )
 
 
-async def get_current_user(
-    request: Request,
-    auth_service: Annotated[AuthService, Depends(get_auth_service)],
-) -> User:
-   
+async def get_current_user(request: Request) -> User:   
     session_id = request.cookies.get(SESSION_COOKIE_NAME)
-    return await auth_service.get_current_user(session_id)
+    if session_id is None:
+        raise SessionNotFoundError("No active session.")
+
+    session_factory = request.app.state.db_session_factory
+    async with session_factory() as db:
+        user_repository = get_user_repository(db, get_token_cipher())
+        session_store = get_session_store(get_redis(request), get_settings_dependency())
+        auth_service = AuthService(
+            oauth_client=None,
+            user_repository=user_repository,
+            session_store=session_store,
+        )
+        return await auth_service.get_current_user(session_id)
 
 
 DbSession = Annotated[AsyncSession, Depends(get_db_session)]

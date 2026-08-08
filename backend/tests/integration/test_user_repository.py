@@ -20,12 +20,8 @@ async def prepared_db(db_engine: AsyncEngine):
         await conn.run_sync(Base.metadata.create_all, tables=[UserModel.__table__])
     yield db_engine
     async with db_engine.begin() as conn:
-        await conn.run_sync(Base.metadata.drop_all, tables=[UserModel.__table__])
-        # The enum type is a separate PostgreSQL object from the table
-        # and isn't dropped by drop_all on the table alone — mirrors
-        # the same cleanup the migration's downgrade() performs.
+        await conn.run_sync(Base.metadata.drop_all)
         from sqlalchemy import text
-
         await conn.execute(text("DROP TYPE IF EXISTS user_status"))
 
 

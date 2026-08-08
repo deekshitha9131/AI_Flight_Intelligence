@@ -3,6 +3,7 @@ from typing import Literal
 from uuid import UUID
 
 from sqlalchemy import func, or_, select
+from sqlalchemy.orm import selectinload
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -40,7 +41,17 @@ def _to_entity(model: EmailModel) -> Email:
         label_ids=list(model.label_ids),
         created_at=model.created_at,
         updated_at=model.updated_at,
-        attachments=[],
+        attachments=[
+            Attachment(
+                id=attachment.id,
+                email_id=attachment.email_id,
+                gmail_attachment_id=attachment.gmail_attachment_id,
+                filename=attachment.filename,
+                mime_type=attachment.mime_type,
+                size=attachment.size,
+            )
+            for attachment in model.attachments
+        ],
     )
 
 
@@ -251,7 +262,9 @@ class EmailRepository:
         if is_starred is not None:
             model.is_starred = is_starred
         await self._session.commit()
+        await self._session.refresh(model)
         return _to_entity(model)
+
 
     async def delete(self, email_id: UUID) -> None:
         model = await self._get_model_or_raise(email_id)
@@ -317,6 +330,13 @@ class EmailRepository:
             )
 
         await self._session.commit()
+        stmt = (
+            select(EmailModel)
+            .options(selectinload(EmailModel.attachments))
+            .where(EmailModel.id == model.id)
+        )
+        result = await self._session.execute(stmt)
+        model = result.scalar_one()
         return _to_entity(model), was_created
 
   

@@ -22,11 +22,8 @@ async def prepared_db(db_engine: AsyncEngine):
         )
     yield db_engine
     async with db_engine.begin() as conn:
-        await conn.run_sync(
-            Base.metadata.drop_all, tables=[OAuthTokenModel.__table__, UserModel.__table__]
-        )
+        await conn.run_sync(Base.metadata.drop_all)
         from sqlalchemy import text
-
         await conn.execute(text("DROP TYPE IF EXISTS user_status"))
 
 

@@ -1,17 +1,3 @@
-"""GmailService.
-
-Orchestrates all three Gmail workflows: initial sync (Task 3.3),
-incremental sync (Task 3.4), and send (Task 3.5). Per the Phase 3
-architecture, this is the only layer allowed to know about GmailClient,
-EmailParser, and the repositories at once — the router never touches
-any of them directly, only this service.
-
-Send (Task 3.5) is deliberately the thinnest method on this class: per
-the task's own architecture section, MIME construction and Base64URL
-encoding live in GmailClient, not here — this method's only job is
-"resolve the user's Gmail connection, delegate, map the response."
-"""
-
 from dataclasses import dataclass
 from typing import Any
 
@@ -66,9 +52,6 @@ class GmailService:
         self._parser = parser or EmailParser()
 
     async def _get_connected_client(self, user: User) -> GmailClient:
-        """Resolve the user's stored OAuth tokens into a ready-to-use
-        GmailClient, or raise GmailNotConnectedError. Shared by every
-        workflow below — sync and send alike need the same check."""
         oauth_token = await self._user_repository.get_oauth_tokens(user.id)
         if oauth_token is None:
             raise GmailNotConnectedError(
@@ -107,10 +90,6 @@ class GmailService:
             skipped=False, thread_id=str(thread.id), attachments_count=len(parsed.attachments)
         )
 
-    # ------------------------------------------------------------------
-    # Initial sync (Task 3.3)
-    # ------------------------------------------------------------------
-
     async def sync_mailbox(self, user: User, *, page_token: str | None = None) -> GmailSyncSummary:
         gmail_client = await self._get_connected_client(user)
 
@@ -118,39 +97,24 @@ class GmailService:
         emails_synced = 0
         emails_skipped = 0
         attachments_found = 0
-        messages_processed = 0
-        next_page_token = page_token
+        list_response = await gmail_client.list_messages(
+            page_token=page_token,
+            max_results=GMAIL_LIST_PAGE_SIZE,
+        )
+        message_refs = list_response.get("messages") or []
 
-        while messages_processed < MAX_MESSAGES_PER_SYNC:
-            remaining_budget = MAX_MESSAGES_PER_SYNC - messages_processed
-            list_response = await gmail_client.list_messages(
-                page_token=next_page_token,
-                max_results=min(GMAIL_LIST_PAGE_SIZE, remaining_budget),
-            )
-            message_refs = list_response.get("messages") or []
+        for ref in message_refs:
+            outcome = await self._fetch_parse_and_store(gmail_client, user, ref["id"])
 
-            if not message_refs:
-                next_page_token = None
-                break
+            if outcome.skipped:
+                emails_skipped += 1
+            else:
+                emails_synced += 1
+                attachments_found += outcome.attachments_count
+                if outcome.thread_id is not None:
+                    threads_synced.add(outcome.thread_id)
 
-            for ref in message_refs:
-                outcome = await self._fetch_parse_and_store(gmail_client, user, ref["id"])
-                messages_processed += 1
-
-                if outcome.skipped:
-                    emails_skipped += 1
-                else:
-                    emails_synced += 1
-                    attachments_found += outcome.attachments_count
-                    if outcome.thread_id is not None:
-                        threads_synced.add(outcome.thread_id)
-
-                if messages_processed >= MAX_MESSAGES_PER_SYNC:
-                    break
-
-            next_page_token = list_response.get("nextPageToken")
-            if next_page_token is None:
-                break
+        next_page_token = list_response.get("nextPageToken")
 
         logger.info(
             "gmail_sync_complete",
@@ -170,10 +134,6 @@ class GmailService:
             emails_skipped=emails_skipped,
             next_page_token=next_page_token,
         )
-
-    # ------------------------------------------------------------------
-    # Incremental sync (Task 3.4)
-    # ------------------------------------------------------------------
 
     @staticmethod
     def _extract_changed_message_ids(history_records: list[dict[str, Any]]) -> list[str]:
@@ -259,10 +219,6 @@ class GmailService:
             history_id=latest_history_id,
         )
 
-    # ------------------------------------------------------------------
-    # Send (Task 3.5)
-    # ------------------------------------------------------------------
-
     async def send_email(
         self,
         user: User,
@@ -275,16 +231,6 @@ class GmailService:
         body_html: str | None = None,
         thread_id: str | None = None,
     ) -> GmailSendResult:
-        """Send an email through the user's connected Gmail account.
-
-        Raises GmailNotConnectedError if Gmail was never connected, and
-        GmailAuthenticationError/GmailAPIError (both already mapped to
-        HTTP responses by the existing exception handlers) on Gmail
-        failures. Recipient-format and body-presence validation happen
-        before this method is ever called — see GmailSendRequest's own
-        validators — so this method assumes its inputs are already
-        well-formed and only handles the Gmail-connection concern.
-        """
         gmail_client = await self._get_connected_client(user)
 
         response = await gmail_client.send_email(

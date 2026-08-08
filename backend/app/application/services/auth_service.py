@@ -1,13 +1,3 @@
-"""AuthService.
-
-Orchestrates the OAuth login flow — the router (presentation layer)
-never talks to GoogleOAuthClient, UserRepository, or SessionStore
-directly, only to this service. This is the "use-case orchestration"
-layer per the frozen Clean Architecture design: it knows *what* needs
-to happen for a login to succeed, while each collaborator it calls
-knows *how* to do its own piece.
-"""
-
 import secrets
 from datetime import UTC, datetime, timedelta
 
@@ -26,7 +16,7 @@ class AuthService:
     def __init__(
         self,
         *,
-        oauth_client: GoogleOAuthClient,
+        oauth_client: GoogleOAuthClient | None,
         user_repository: UserRepository,
         session_store: SessionStore,
     ) -> None:
@@ -51,12 +41,6 @@ class AuthService:
     async def handle_callback(
         self, *, code: str, state: str, state_cookie_value: str | None
     ) -> tuple[User, str]:
-        """Complete the login: validate CSRF state, exchange the code,
-        resolve-or-create the user, persist tokens, issue a session.
-
-        Returns (user, session_id) — the router sets session_id as the
-        session cookie and redirects to the frontend.
-        """
         if state_cookie_value is None or not secrets.compare_digest(state, state_cookie_value):
             raise InvalidOAuthStateError(
                 "OAuth state mismatch — this can happen if the login attempt "
@@ -77,12 +61,6 @@ class AuthService:
 
         refresh_token = token_response.refresh_token
         if refresh_token is None:
-            # Google omits refresh_token on a repeat consent grant unless
-            # something invalidated the previous one — reuse whatever we
-            # already have on file rather than overwriting it with
-            # nothing. `prompt=consent` on every authorization request
-            # (see GoogleOAuthClient) makes this the rare case, not the
-            # common one, but it must still be handled correctly.
             existing_tokens = await self._user_repository.get_oauth_tokens(user.id)
             if existing_tokens is None:
                 raise OAuthExchangeError(
@@ -107,17 +85,6 @@ class AuthService:
         await self._session_store.delete_session(session_id)
 
     async def get_current_user(self, session_id: str | None) -> User:
-        """Resolve the current session cookie to a User.
-
-        Raises SessionNotFoundError (401) for every failure mode —
-        missing cookie, expired/unknown session, or a session pointing
-        at a user that no longer exists — deliberately without
-        distinguishing them in the response. Telling an unauthenticated
-        caller *why* their session is invalid ("that user was deleted"
-        vs. "session expired") leaks information for no benefit to a
-        legitimate client, which always just needs to re-authenticate
-        either way.
-        """
         if session_id is None:
             raise SessionNotFoundError("No active session.")
 
