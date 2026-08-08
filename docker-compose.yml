@@ -1,39 +1,16 @@
-# ==============================================================================
-# Docker Compose — base service definitions.
-# Local development additionally loads docker-compose.override.yml
-# automatically (Compose's default behavior — no -f flag needed).
-# Production deploys layer docker-compose.prod.yml explicitly:
-#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
-# ==============================================================================
-
 networks:
-  # Single bridge network for every service. A solo-developer project at
-  # this scale gains nothing from segmenting frontend/backend networks —
-  # that isolation matters when different teams own different tiers and
-  # you want a hard boundary between them. Here it would only add
-  # cross-network wiring for the reverse proxy to reach both sides.
+
   app_network:
     driver: bridge
     name: ${COMPOSE_PROJECT_NAME:-ai-email-assistant}_network
 
 volumes:
-  # Named volume for Postgres data files — survives `docker compose down`
-  # (only removed with `docker compose down -v`). This is what makes the
-  # database durable across container recreation/rebuilds.
   postgres_data:
     name: ${COMPOSE_PROJECT_NAME:-ai-email-assistant}_postgres_data
-  # Named volume for Redis's append-only file — Redis in this system is
-  # documented as ephemeral/never-authoritative (cache, broker, pub/sub),
-  # but persisting it anyway avoids an unnecessary cold cache and a
-  # dropped-in-flight-task risk on every routine container restart.
   redis_data:
     name: ${COMPOSE_PROJECT_NAME:-ai-email-assistant}_redis_data
 
 services:
-  # ------------------------------------------------------------------
-  # PostgreSQL — pgvector-enabled image, per the frozen vector-store
-  # decision (PostgreSQL + pgvector, no separate vector database).
-  # ------------------------------------------------------------------
   postgres:
     image: pgvector/pgvector:pg16
     container_name: ${COMPOSE_PROJECT_NAME:-ai-email-assistant}-postgres
@@ -55,11 +32,6 @@ services:
       retries: 5
       start_period: 10s
 
-  # ------------------------------------------------------------------
-  # Redis — cache, Celery broker/result backend, pub/sub for websocket
-  # fan-out. Append-only persistence enabled so a routine restart
-  # doesn't silently drop in-flight Celery tasks.
-  # ------------------------------------------------------------------
   redis:
     image: redis:7-alpine
     container_name: ${COMPOSE_PROJECT_NAME:-ai-email-assistant}-redis
@@ -78,10 +50,6 @@ services:
       retries: 5
       start_period: 5s
 
-  # ------------------------------------------------------------------
-  # API — stateless FastAPI service. Horizontally scalable; nothing
-  # here holds session or task state locally.
-  # ------------------------------------------------------------------
   api:
     build:
       context: ./backend
@@ -107,12 +75,6 @@ services:
       retries: 3
       start_period: 20s
 
-  # ------------------------------------------------------------------
-  # Celery workers — one container per queue, matching the segmented
-  # worker-pool rule from the frozen architecture. A slow AI run must
-  # never starve sync, and vice versa; separate containers give each
-  # queue its own process, memory ceiling, and independent scaling.
-  # ------------------------------------------------------------------
   worker-sync:
     build:
       context: ./backend
@@ -161,10 +123,6 @@ services:
       retries: 3
       start_period: 20s
 
-  # This queue runs the classification-gated single-LLM-call OR full
-  # CrewAI Flow path. Concurrency is deliberately 1 — this is the
-  # most expensive queue in the system, and cost/latency control
-  # depends on never letting it fan out unbounded.
   worker-ai:
     build:
       context: ./backend
@@ -237,11 +195,6 @@ services:
       retries: 3
       start_period: 20s
 
-  # ------------------------------------------------------------------
-  # Celery beat — scheduler for periodic jobs (token refresh sweep,
-  # memory refresh, nightly analytics aggregation). Exactly one
-  # instance ever — running two beats double-fires every scheduled job.
-  # ------------------------------------------------------------------
   celery-beat:
     build:
       context: ./backend
@@ -260,11 +213,6 @@ services:
       redis:
         condition: service_healthy
 
-  # ------------------------------------------------------------------
-  # Frontend — static build served by its own nginx (production
-  # target) or the Vite dev server (development target, see
-  # docker-compose.override.yml).
-  # ------------------------------------------------------------------
   frontend:
     build:
       context: ./frontend
@@ -279,11 +227,6 @@ services:
     depends_on:
       - api
 
-  # ------------------------------------------------------------------
-  # Reverse proxy — the only service exposed to the host/internet.
-  # Terminates one public entry point, routes /api and /ws to the
-  # API service and everything else to the frontend service.
-  # ------------------------------------------------------------------
   nginx:
     image: nginx:1.27-alpine
     container_name: ${COMPOSE_PROJECT_NAME:-ai-email-assistant}-nginx
