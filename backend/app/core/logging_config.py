@@ -1,13 +1,3 @@
-"""Structured logging configuration.
-
-Configures structlog to emit one consistent JSON schema across the API,
-Celery workers, and (in later phases) the AI orchestration layer —
-`timestamp`, `level`, `logger`, `event`, plus whatever context a caller
-binds in (`request_id`, `user_id`, etc.). This uniformity is what makes
-cross-service tracing possible later; it is set up once, here, rather
-than each module configuring its own logger independently.
-"""
-
 import logging
 import sys
 from typing import cast
@@ -18,23 +8,10 @@ from app.core.config import get_settings
 
 
 def configure_logging() -> None:
-    """Configure structlog + stdlib logging for the current process.
 
-    Called once at application startup (see app/main.py lifespan) and
-    once per Celery worker process (see app/core/celery_app.py in a
-    later phase) — anywhere a new Python process needs consistent logs.
-    """
     settings = get_settings()
 
-    # In development, render human-readable colored output for local
-    # debugging. In every other environment, render strict JSON — log
-    # aggregation tooling needs a stable machine-parseable shape, not
-    # something optimized for a terminal.
-    # Note: `format_exc_info` is deliberately omitted from this chain.
-    # When structlog is wired into stdlib logging via ProcessorFormatter
-    # (below), exception rendering is handled once, downstream, by the
-    # renderer itself — including format_exc_info here as well would
-    # double up on exception formatting and produce a runtime warning.
+
     shared_processors: list[structlog.types.Processor] = [
         structlog.contextvars.merge_contextvars,
         structlog.stdlib.add_log_level,
@@ -70,8 +47,7 @@ def configure_logging() -> None:
     root_logger.handlers = [handler]
     root_logger.setLevel(logging.DEBUG if settings.app_debug else logging.INFO)
 
-    # Quiet noisy third-party loggers that would otherwise flood output
-    # at INFO level without adding diagnostic value day-to-day.
+   
     logging.getLogger("uvicorn.access").setLevel(logging.WARNING)
     logging.getLogger("sqlalchemy.engine").setLevel(
         logging.INFO if settings.app_debug else logging.WARNING

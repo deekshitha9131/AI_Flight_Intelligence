@@ -1,8 +1,3 @@
-"""Attachment ORM model — metadata only, per Phase 3 scope (no file
-bytes downloaded or stored). See app/application/dto/gmail.py's
-ParsedAttachment for the equivalent parse-time DTO.
-"""
-
 from uuid import UUID
 
 from sqlalchemy import ForeignKey, Integer, String, UniqueConstraint

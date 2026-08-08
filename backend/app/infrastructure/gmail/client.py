@@ -1,23 +1,3 @@
-"""Gmail API client.
-
-The single gateway for all Gmail API communication — every read/send
-operation the rest of the application needs from Gmail flows through
-this class. Nothing here touches the database or implements a
-sync/send *workflow*; those are service-layer concerns (see
-GmailService). This module's job is: "given a user's OAuth tokens, let
-the caller talk to the Gmail API and get predictable results back" —
-extended in Task 3.5 to also cover building and sending a MIME email,
-since the doc's own architecture section places "convert to raw
-MIME, Base64URL encode, call users.messages.send" here, not in the
-service.
-
-Deliberately built on `google-api-python-client` (already a project
-dependency), not raw httpx — see this module's original docstring
-(unchanged) for why. It is synchronous end-to-end, so every call here
-is bridged onto a worker thread via `asyncio.to_thread` rather than
-blocking the event loop.
-"""
-
 import asyncio
 import base64
 from email.mime.multipart import MIMEMultipart
@@ -43,20 +23,10 @@ _GMAIL_SERVICE_NAME = "gmail"
 _GMAIL_SERVICE_VERSION = "v1"
 _DEFAULT_MAX_RESULTS = 100
 
-# HTTP statuses Gmail returns when the caller's credentials are the
-# problem (expired/revoked/insufficient scope) — worth distinguishing
-# from every other Gmail API failure so the caller can tell "the user
-# needs to reconnect Gmail" apart from "Gmail had a bad day."
 _AUTH_FAILURE_STATUSES = frozenset({401, 403})
 
 
 class GmailClient:
-    """Wraps the Gmail API operations the rest of the application needs.
-
-    Constructed per-use (one instance per request/task, holding exactly
-    one user's tokens) — never safe to share one instance across
-    different users' requests.
-    """
 
     def __init__(self, *, oauth_token: OAuthToken, settings: Settings) -> None:
         self._oauth_token = oauth_token
@@ -111,11 +81,6 @@ class GmailClient:
             raise GmailAuthenticationError(
                 "Failed to authenticate with Gmail using the stored OAuth tokens."
             ) from exc
-
-    # ------------------------------------------------------------------
-    # Public Gmail API operations
-    # ------------------------------------------------------------------
-
     async def get_profile(self) -> dict[str, Any]:
         """Return the connected Gmail account's profile."""
         return await self._execute(lambda service: service.users().getProfile(userId="me").execute())
@@ -164,15 +129,6 @@ class GmailClient:
         return await self._execute(_call)
 
     async def send_message(self, *, raw_message: str, thread_id: str | None = None) -> dict[str, Any]:
-        """Send a pre-built, base64url-encoded RFC 2822 message via Gmail.
-
-        `raw_message` must already be a complete, base64url-encoded MIME
-        message. Passing `thread_id` keeps a reply attached to its
-        Gmail thread instead of starting a new one. Kept as its own
-        public method (not folded into `send_email` below) so a caller
-        that already has a raw MIME payload from elsewhere can still
-        use this client without going through MIME construction again.
-        """
 
         def _call(service: Resource) -> dict[str, Any]:
             body: dict[str, Any] = {"raw": raw_message}
@@ -181,10 +137,6 @@ class GmailClient:
             return service.users().messages().send(userId="me", body=body).execute()
 
         return await self._execute(_call)
-
-    # ------------------------------------------------------------------
-    # Task 3.5 — structured send (MIME construction + Base64URL encode)
-    # ------------------------------------------------------------------
 
     @staticmethod
     def _build_mime_message(
@@ -196,23 +148,7 @@ class GmailClient:
         body_text: str | None,
         body_html: str | None,
     ) -> MIMEMultipart | MIMEText:
-        """Build an RFC 5322 MIME message from structured fields.
-
-        Three shapes, matching what was actually provided:
-        - both bodies → `multipart/alternative` with a text/plain part
-          and a text/html part, letting the receiving client pick
-          whichever it renders best (the standard email convention).
-        - html only → a bare `text/html` message.
-        - text only (or neither, though callers validate that before
-          reaching this point — see GmailService.send_email and
-          GmailSendRequest's schema validator) → a bare `text/plain`
-          message.
-
-        No `From` header is set deliberately — Gmail's send API fills
-        the authenticated user's own address in automatically, and
-        setting a mismatched one manually is a well-known way to get a
-        message silently rejected or flagged.
-        """
+       
         if body_text and body_html:
             message: MIMEMultipart | MIMEText = MIMEMultipart("alternative")
             message.attach(MIMEText(body_text, "plain", "utf-8"))
@@ -248,14 +184,6 @@ class GmailClient:
         body_html: str | None = None,
         thread_id: str | None = None,
     ) -> dict[str, Any]:
-        """Build a MIME email from structured fields and send it via Gmail.
-
-        This is the method GmailService calls for Task 3.5's /gmail/send
-        workflow — `send_message` above remains available separately for
-        any future caller that already has a raw payload. Passing
-        `thread_id` sends as a reply within that Gmail thread; omitting
-        it starts a new conversation.
-        """
         message = self._build_mime_message(
             to=to, cc=cc or [], bcc=bcc or [], subject=subject, body_text=body_text, body_html=body_html
         )

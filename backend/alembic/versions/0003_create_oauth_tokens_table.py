@@ -1,14 +1,3 @@
-"""create oauth_tokens table
-
-Revision ID: 0003
-Revises: 0002
-Create Date: 2026-08-03
-
-Hand-written, consistent with 0001/0002 — verified beforehand by
-compiling OAuthTokenModel's DDL against the real PostgreSQL dialect (no
-live connection needed for that step).
-"""
-
 from typing import Sequence, Union
 
 import sqlalchemy as sa

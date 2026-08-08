@@ -1,12 +1,3 @@
-"""Project-wide constants.
-
-Centralizing these here means the project name, API version prefix, and
-pagination defaults are each defined exactly once. Any file needing them
-imports from here rather than re-declaring a literal string, which is
-what makes a future rename or version bump a one-line change instead of
-a grep-and-replace across the codebase.
-"""
-
 from typing import Final
 
 # --- Project identity ---
@@ -20,14 +11,11 @@ PROJECT_VERSION: Final[str] = "0.1.0"
 # --- API versioning ---
 API_V1_PREFIX: Final[str] = "/api/v1"
 
-
-# --- OpenAPI tag names ---
-# Used to group endpoints in the generated docs. Declared centrally so a
-# router and its tag metadata can never drift out of sync silently.
 class OpenAPITags:
     HEALTH: Final[str] = "Health"
     AUTH: Final[str] = "Auth"
     GMAIL: Final[str] = "Gmail"
+    EMAILS: Final[str] = "Emails"
     THREADS: Final[str] = "Threads"
     DRAFTS: Final[str] = "Drafts"
     CONTACTS: Final[str] = "Contacts"
@@ -43,6 +31,13 @@ OPENAPI_TAGS_METADATA: Final[list[dict[str, str]]] = [
     {
         "name": OpenAPITags.AUTH,
         "description": "Google OAuth handshake and session management.",
+    },
+    {
+    "name": OpenAPITags.EMAILS,
+    "description": (
+        "Locally stored inbox — listing and detail retrieval, "
+        "read entirely from PostgreSQL (never Gmail directly)."
+    ),
     },
     {
         "name": OpenAPITags.THREADS,
@@ -82,14 +77,6 @@ HEALTH_STATUS_ERROR: Final[str] = "error"
 # --- Standard response header ---
 REQUEST_ID_HEADER: Final[str] = "X-Request-ID"
 
-# --- Google OAuth ---
-# Least-privilege by design (per the frozen security strategy): gmail
-# scopes are readonly + send, never the broader "modify" or "full
-# access" scopes, since nothing in this system needs to alter/delete
-# mail in the user's mailbox. `openid` + the two userinfo scopes are
-# what let the callback resolve a stable identity (`sub`) and a display
-# email/name — without them Google's token response still succeeds but
-# the userinfo endpoint has nothing to return.
 GOOGLE_OAUTH_SCOPES: Final[list[str]] = [
     "openid",
     "https://www.googleapis.com/auth/userinfo.email",
@@ -104,9 +91,7 @@ GOOGLE_USERINFO_ENDPOINT: Final[str] = "https://www.googleapis.com/oauth2/v3/use
 
 # --- Cookies ---
 SESSION_COOKIE_NAME: Final[str] = "session_id"
-# Short-lived, separate from the session cookie — holds the CSRF state
-# value between the /login redirect and the /callback request only;
-# cleared immediately once the callback validates it.
+
 OAUTH_STATE_COOKIE_NAME: Final[str] = "oauth_state"
 OAUTH_STATE_COOKIE_MAX_AGE_SECONDS: Final[int] = 600  # 10 minutes
 

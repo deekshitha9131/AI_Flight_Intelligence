@@ -1,11 +1,3 @@
-"""Thread ORM model.
-
-Simplified Phase 3 schema: `user_id` lives directly on `threads` (no
-`mailboxes` table yet — see the migration's module docstring). Mapped
-to/from the domain entity (app/domain/entities/thread.py) exclusively
-by ThreadRepository, per this project's Clean Architecture rule.
-"""
-
 from uuid import UUID
 
 from sqlalchemy import ForeignKey, String, Text, UniqueConstraint

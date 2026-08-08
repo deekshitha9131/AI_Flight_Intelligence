@@ -1,38 +1,17 @@
-"""Typed, validated application settings.
-
-All configuration is environment-sourced (per the frozen configuration
-design). This module is the single place that reads `os.environ` for
-settings values — every other file that needs a config value calls
-`get_settings()` rather than touching the environment directly.
-Loading is fail-fast: if a required variable is missing or malformed,
-the app must refuse to start, not fail later on first use.
-"""
-
 import os
 from functools import lru_cache
 
 from pydantic import Field, ValidationInfo, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-# Environment-file selection is a necessary exception to "config.py is
-# the only os.environ reader": pydantic-settings needs to know *which*
-# file(s) to load before it can construct Settings from them, which
-# means the active environment name has to be read directly here, one
-# variable, before Settings exists. Nothing else in this module reads
-# os.environ outside this bootstrapping step.
+
 _ACTIVE_ENV = os.getenv("APP_ENV", "development")
 
-# Base `.env` always loads first; an optional `.env.{environment}`
-# layers on top and overrides matching keys (pydantic-settings applies
-# later files in the tuple last, so later = higher precedence). This is
-# what lets infra/env/.env.staging.example and .env.production.example
-# (from the Docker infrastructure phase) actually mean something at
-# load time, rather than existing only as documentation.
+
 _ENV_FILES = (".env", f".env.{_ACTIVE_ENV}")
 
 
 class Settings(BaseSettings):
-    """Application settings, sourced from environment variables / `.env` files."""
 
     model_config = SettingsConfigDict(
         env_file=_ENV_FILES,
@@ -46,12 +25,7 @@ class Settings(BaseSettings):
     app_debug: bool = Field(default=False, alias="APP_DEBUG")
     app_secret_key: str = Field(alias="APP_SECRET_KEY")
 
-    # --- CORS ---
-    # Comma-separated origins in the environment (e.g.
-    # "http://localhost:5173,https://app.example.com"), parsed into a
-    # list via the `cors_origins` property below.
-    cors_origins_raw: str = Field(default="http://localhost:5173", alias="CORS_ORIGINS")
-
+   
     # --- Database ---
     database_url: str = Field(alias="DATABASE_URL")
     database_pool_size: int = Field(default=10, alias="DATABASE_POOL_SIZE")
@@ -74,8 +48,18 @@ class Settings(BaseSettings):
     google_redirect_uri: str = Field(default="", alias="GOOGLE_REDIRECT_URI")
 
     # --- Frontend / session ---
-    frontend_base_url: str = Field(default="http://localhost:5173", alias="FRONTEND_BASE_URL")
-    session_ttl_seconds: int = Field(default=604800, alias="SESSION_TTL_SECONDS")  # 7 days
+    frontend_base_url: str = Field(
+        default="http://localhost:5173",
+        alias="FRONTEND_BASE_URL",
+    )
+    cors_origins_raw: str = Field(
+        default="http://localhost:5173",
+        alias="CORS_ORIGINS",
+    )
+    session_ttl_seconds: int = Field(
+        default=604800,
+        alias="SESSION_TTL_SECONDS",
+    )  # 7 days
 
     # --- Token encryption ---
     token_encryption_key: str = Field(alias="TOKEN_ENCRYPTION_KEY")
@@ -153,10 +137,6 @@ class Settings(BaseSettings):
             raise ValueError("CORS_ORIGINS must not be empty — the frontend origin is required.")
         return value
 
-    # ------------------------------------------------------------------
-    # Cross-field validation (production safety net)
-    # ------------------------------------------------------------------
-
     @model_validator(mode="after")
     def validate_celery_time_limits(self) -> "Settings":
         if self.celery_task_soft_time_limit >= self.celery_task_time_limit:
@@ -170,13 +150,6 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def validate_production_safety(self) -> "Settings":
-        """Refuse to start with development-shaped config in production.
-
-        These are exactly the mistakes that are cheap to catch at
-        startup and expensive to discover after a real deploy: debug
-        mode leaking stack traces, or a secret still set to the
-        placeholder value from .env.example.
-        """
         if self.app_env != "production":
             return self
 
@@ -201,9 +174,7 @@ class Settings(BaseSettings):
 
         return self
 
-    # ------------------------------------------------------------------
-    # Derived properties
-    # ------------------------------------------------------------------
+
 
     @property
     def cors_origins(self) -> list[str]:
@@ -217,10 +188,5 @@ class Settings(BaseSettings):
 
 @lru_cache
 def get_settings() -> Settings:
-    """Return the process-wide cached Settings instance.
-
-    Cached because Settings parses and validates the environment on
-    construction — repeating that on every request would be pure waste
-    for values that never change during the process lifetime.
-    """
+   
     return Settings()  # type: ignore[call-arg]

@@ -1,5 +1,3 @@
-"""Email and Attachment domain entities. Zero framework dependency."""
-
 from dataclasses import dataclass, field
 from datetime import datetime
 from uuid import UUID

@@ -1,15 +1,3 @@
-"""OAuthToken ORM model.
-
-Deliberately its own table, not columns bolted onto `users` — token
-rotation/compromise handling should never risk touching identity rows,
-and this table's lifecycle (created on first login, updated on every
-token refresh) is different enough from `users` (created once, rarely
-updated) to warrant the separation. Owned and queried exclusively
-through UserRepository (per the frozen simplified-architecture decision
-to consolidate `users`/`oauth_tokens`/`user_settings` into one
-repository) — there is no separate OAuthTokenRepository.
-"""
-
 from datetime import datetime
 from uuid import UUID
 

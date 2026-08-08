@@ -1,18 +1,3 @@
-"""Request logging middleware.
-
-Logs one structured line per request: method, path, status code, and
-latency in milliseconds. Deliberately does NOT log request or response
-bodies — email content must never land in general application logs
-(per the frozen logging design); that belongs in the access-restricted
-audit log, written by services at the point of a safety-critical action,
-not sniffed out of HTTP traffic here.
-
-Must run *inside* RequestIDMiddleware (registered before it in
-app/main.py) so that by the time this middleware logs, structlog's
-contextvars already carry the request_id — this middleware never
-handles request IDs itself, it relies entirely on that binding.
-"""
-
 import time
 from collections.abc import Awaitable, Callable
 

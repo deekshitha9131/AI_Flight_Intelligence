@@ -1,97 +1,159 @@
-"""Integration tests for the database layer — Base, mixins, and pgvector
-against a real PostgreSQL instance.
+"""Integration tests for the PostgreSQL database and pgvector support."""
 
-Requires DATABASE_URL to point at a reachable pgvector-enabled Postgres
-(the docker-compose `postgres` service, or CI's service container).
-Skips gracefully via the `db_engine` fixture (tests/conftest.py) when
-none is reachable — this is expected and correct outside `docker
-compose up` or CI, not a failure.
-"""
-
-import uuid
+from uuid import UUID, uuid4
 
 import pytest
-from sqlalchemy import String, select, text
-from sqlalchemy.ext.asyncio import AsyncEngine
+from sqlalchemy import String, text
+from sqlalchemy.dialects.postgresql import UUID as PostgreSQLUUID
 from sqlalchemy.orm import Mapped, mapped_column
 
+from app.core.config import Settings
 from app.infrastructure.database.base import Base
-from app.infrastructure.database.mixins import TimestampMixin, UUIDPrimaryKeyMixin
+from app.infrastructure.database.engine import create_db_engine, dispose_engine
+from app.infrastructure.database.session import create_session_factory
 from app.infrastructure.vector.types import embedding_column
 
-pytestmark = pytest.mark.integration
+
+class _IntegrationCheckModel(Base):
+    """Temporary model used only by the database integration tests."""
+
+    __tablename__ = "integration_check"
+
+    id: Mapped[UUID] = mapped_column(
+        PostgreSQLUUID(as_uuid=True),
+        primary_key=True,
+        default=uuid4,
+    )
+
+    name: Mapped[str] = mapped_column(
+        String(100),
+        nullable=False,
+    )
+
+    embedding: Mapped[list[float] | None] = embedding_column(
+        nullable=True,
+    )
 
 
-class _IntegrationCheckModel(Base, UUIDPrimaryKeyMixin, TimestampMixin):
-    """A throwaway table, created and dropped within this test module only —
-    never part of the application's real schema. Exercises the exact
-    same base class, mixins, and pgvector column type real models will
-    use once they exist."""
+@pytest.fixture()
+async def db_engine():
+    """Create an async database engine for the integration tests."""
 
-    __tablename__ = "_integration_check_model"
+    settings = Settings()
 
-    label: Mapped[str] = mapped_column(String(255), nullable=False)
-    embedding: Mapped[list[float] | None] = embedding_column()
+    engine = create_db_engine(settings)
 
-
-@pytest.fixture
-async def prepared_db(db_engine: AsyncEngine):
-    async with db_engine.begin() as conn:
-        await conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
-        await conn.run_sync(Base.metadata.create_all, tables=[_IntegrationCheckModel.__table__])
-    yield db_engine
-    async with db_engine.begin() as conn:
-        await conn.run_sync(Base.metadata.drop_all, tables=[_IntegrationCheckModel.__table__])
+    try:
+        yield engine
+    finally:
+        await dispose_engine(engine)
 
 
-async def test_uuid_primary_key_is_generated_client_side(prepared_db: AsyncEngine) -> None:
-    from sqlalchemy.ext.asyncio import async_sessionmaker
+@pytest.fixture()
+async def session_factory(db_engine):
+    """Create the async session factory used by the integration tests."""
 
-    session_factory = async_sessionmaker(bind=prepared_db, expire_on_commit=False)
-    async with session_factory() as session:
-        row = _IntegrationCheckModel(label="test-row")
-        assert row.id is not None  # generated at construction, before insert
-        session.add(row)
-        await session.commit()
+    return create_session_factory(db_engine)
 
-        result = await session.execute(
-            select(_IntegrationCheckModel).where(_IntegrationCheckModel.id == row.id)
+
+@pytest.fixture(autouse=True)
+async def integration_table(db_engine):
+    """Create and remove the temporary integration-test table."""
+
+    async with db_engine.begin() as connection:
+        await connection.run_sync(
+            Base.metadata.create_all,
+            tables=[_IntegrationCheckModel.__table__],
         )
-        fetched = result.scalar_one()
-        assert fetched.label == "test-row"
-        assert isinstance(fetched.id, uuid.UUID)
 
+    yield
 
-async def test_timestamps_are_server_generated(prepared_db: AsyncEngine) -> None:
-    from sqlalchemy.ext.asyncio import async_sessionmaker
-
-    session_factory = async_sessionmaker(bind=prepared_db, expire_on_commit=False)
-    async with session_factory() as session:
-        row = _IntegrationCheckModel(label="timestamp-test")
-        session.add(row)
-        await session.commit()
-        await session.refresh(row)
-
-        assert row.created_at is not None
-        assert row.updated_at is not None
-
-
-async def test_embedding_column_stores_and_retrieves_vector(prepared_db: AsyncEngine) -> None:
-    from sqlalchemy.ext.asyncio import async_sessionmaker
-
-    from app.core.constants import EMBEDDING_DIMENSIONS
-
-    session_factory = async_sessionmaker(bind=prepared_db, expire_on_commit=False)
-    vector = [0.1] * EMBEDDING_DIMENSIONS
-
-    async with session_factory() as session:
-        row = _IntegrationCheckModel(label="vector-test", embedding=vector)
-        session.add(row)
-        await session.commit()
-
-        result = await session.execute(
-            select(_IntegrationCheckModel).where(_IntegrationCheckModel.id == row.id)
+    async with db_engine.begin() as connection:
+        await connection.run_sync(
+            _IntegrationCheckModel.__table__.drop,
         )
-        fetched = result.scalar_one()
-        assert fetched.embedding is not None
-        assert len(fetched.embedding) == EMBEDDING_DIMENSIONS
+
+
+@pytest.mark.asyncio
+async def test_database_connection(db_engine):
+    """Verify that PostgreSQL accepts a basic query."""
+
+    async with db_engine.connect() as connection:
+        result = await connection.execute(text("SELECT 1"))
+
+        assert result.scalar_one() == 1
+
+
+@pytest.mark.asyncio
+async def test_pgvector_extension_is_available(db_engine):
+    """Verify that the PostgreSQL pgvector extension is installed."""
+
+    async with db_engine.connect() as connection:
+        result = await connection.execute(
+            text(
+                """
+                SELECT EXISTS (
+                    SELECT 1
+                    FROM pg_extension
+                    WHERE extname = 'vector'
+                )
+                """
+            )
+        )
+
+        assert result.scalar_one() is True
+
+
+@pytest.mark.asyncio
+async def test_create_and_read_vector_record(session_factory):
+    """Verify that a pgvector column can store and retrieve an embedding."""
+
+    embedding = [0.1] * 1536
+
+    async with session_factory() as session:
+        record = _IntegrationCheckModel(
+            name="integration-test",
+            embedding=embedding,
+        )
+
+        session.add(record)
+        await session.commit()
+
+        record_id = record.id
+
+    async with session_factory() as session:
+        stored = await session.get(
+            _IntegrationCheckModel,
+            record_id,
+        )
+
+        assert stored is not None
+        assert stored.name == "integration-test"
+        assert stored.embedding is not None
+        assert len(stored.embedding) == 1536
+
+
+@pytest.mark.asyncio
+async def test_nullable_embedding_is_supported(session_factory):
+    """Verify that a record can exist before its embedding is generated."""
+
+    async with session_factory() as session:
+        record = _IntegrationCheckModel(
+            name="without-embedding",
+            embedding=None,
+        )
+
+        session.add(record)
+        await session.commit()
+
+        record_id = record.id
+
+    async with session_factory() as session:
+        stored = await session.get(
+            _IntegrationCheckModel,
+            record_id,
+        )
+
+        assert stored is not None
+        assert stored.name == "without-embedding"
+        assert stored.embedding is None

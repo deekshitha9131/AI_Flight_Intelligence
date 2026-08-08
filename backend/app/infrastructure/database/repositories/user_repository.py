@@ -1,29 +1,3 @@
-"""User repository — concrete SQLAlchemy implementation.
-
-Implements IUserRepository (app/application/interfaces/user_repository.py).
-Every method maps the ORM model (UserModel) to the domain entity (User)
-before returning — nothing outside this file ever sees a UserModel
-instance, per the project's Clean Architecture rule that repositories
-never leak raw ORM objects past the infrastructure boundary.
-
-Also owns OAuthToken persistence (save_oauth_tokens / get_oauth_tokens)
-and the Gmail sync cursor (get_gmail_history_id / update_gmail_history_id)
-— per the frozen simplified-architecture decision to consolidate
-`users`, `oauth_tokens`, and `user_settings` into one repository rather
-than one-repository-per-table. `gmail_history_id` is a plain column on
-`users` (Task 3.4), not a separate entity — exposed as two narrow
-methods rather than folded into the User domain entity, since nothing
-outside the Gmail sync workflow ever needs it.
-
-A note on transactions: this phase has no Unit of Work or service layer
-yet (both are later phases), so each method commits its own change
-directly rather than leaving the transaction boundary to a caller. This
-is a deliberate, temporary simplification — once a service layer and
-Unit of Work exist, these methods should stop calling `commit()`
-themselves and instead just `flush()`, leaving commit to the Unit of
-Work wrapping the use case. Flagged here so that refactor isn't a
-surprise later.
-"""
 
 from datetime import UTC, datetime
 from uuid import UUID
@@ -55,7 +29,7 @@ def _to_entity(model: UserModel) -> User:
 
 
 class UserRepository:
-    """See IUserRepository for the contract this class implements."""
+    
 
     def __init__(self, session: AsyncSession, token_cipher: TokenCipher) -> None:
         self._session = session
@@ -140,13 +114,7 @@ class UserRepository:
         token_expiry: datetime,
         granted_scopes: list[str],
     ) -> None:
-        """Create or replace the stored token set for a user.
-
-        One row per user (enforced by the unique constraint on
-        `oauth_tokens.user_id`) — a repeat login overwrites the previous
-        tokens rather than accumulating rows, since only the most recent
-        grant is ever meaningful to act on.
-        """
+       
         stmt = select(OAuthTokenModel).where(OAuthTokenModel.user_id == user_id)
         result = await self._session.execute(stmt)
         model = result.scalar_one_or_none()
@@ -187,22 +155,12 @@ class UserRepository:
         )
 
     async def get_gmail_history_id(self, user_id: UUID) -> str | None:
-        """Return the user's last-synced Gmail history ID as a string
-        (matching Gmail API's own JSON representation), or None if no
-        sync has ever completed. Stored as BigInteger — converted here
-        at the persistence boundary so callers never deal with the
-        storage type."""
+        
         model = await self._get_model_or_raise(user_id)
         return str(model.gmail_history_id) if model.gmail_history_id is not None else None
 
     async def update_gmail_history_id(self, user_id: UUID, history_id: str) -> None:
-        """Persist the newest Gmail history ID after a successful sync.
-
-        Raises ValueError (via int()) if `history_id` isn't numeric —
-        deliberately not caught here, since a non-numeric value from
-        Gmail's own API would indicate something worth failing loudly
-        on, not silently swallowing.
-        """
+       
         model = await self._get_model_or_raise(user_id)
         model.gmail_history_id = int(history_id)
         await self._session.commit()

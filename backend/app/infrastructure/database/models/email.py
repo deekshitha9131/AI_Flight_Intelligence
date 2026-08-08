@@ -1,12 +1,3 @@
-"""Email ORM model.
-
-Mapped to/from the domain entity (app/domain/entities/email.py)
-exclusively by EmailRepository. `attachments` is a relationship, not a
-separate repository — per the same "no independent existence from its
-parent" reasoning OAuthTokenModel uses relative to UserRepository
-(attachments have no meaning outside the email that carries them).
-"""
-
 from datetime import datetime
 from uuid import UUID
 

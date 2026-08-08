@@ -1,19 +1,3 @@
-"""create threads, emails, attachments tables
-
-Revision ID: 0004
-Revises: 0003
-Create Date: 2026-08-06
-
-Hand-written, consistent with 0001-0003 — verified beforehand by
-compiling ThreadModel/EmailModel/AttachmentModel's DDL against the real
-PostgreSQL dialect. Uses the simplified Phase 3 schema (threads carry
-`user_id` directly, no `mailboxes` table) rather than Doc 2's full
-schema — Phase 3 explicitly scopes storage to what initial/incremental
-sync needs; the `mailboxes` table is deferred to whichever later phase
-actually needs multi-mailbox/sync-cursor concerns beyond what
-`threads.history_id` already covers for a single connected account.
-"""
-
 from typing import Sequence, Union
 
 import sqlalchemy as sa
