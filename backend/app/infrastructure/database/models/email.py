@@ -41,6 +41,6 @@ class EmailModel(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     attachments: Mapped[list[AttachmentModel]] = relationship(
         back_populates="email",
         cascade="all, delete-orphan",
-        lazy="selectin",
+        lazy="noload",
     )
     

@@ -40,17 +40,7 @@ def _to_entity(model: EmailModel) -> Email:
         label_ids=list(model.label_ids),
         created_at=model.created_at,
         updated_at=model.updated_at,
-        attachments=[
-            Attachment(
-                id=a.id,
-                email_id=a.email_id,
-                gmail_attachment_id=a.gmail_attachment_id,
-                filename=a.filename,
-                mime_type=a.mime_type,
-                size=a.size,
-            )
-            for a in model.attachments
-        ],
+        attachments=[],
     )
 
 
@@ -250,7 +240,6 @@ class EmailRepository:
                 f"An email with gmail_message_id {gmail_message_id!r} already "
                 "exists for this user."
             ) from exc
-        await self._session.refresh(model, attribute_names=["attachments"])
         return _to_entity(model)
 
     async def update(
@@ -262,7 +251,6 @@ class EmailRepository:
         if is_starred is not None:
             model.is_starred = is_starred
         await self._session.commit()
-        await self._session.refresh(model, attribute_names=["attachments"])
         return _to_entity(model)
 
     async def delete(self, email_id: UUID) -> None:
@@ -329,7 +317,6 @@ class EmailRepository:
             )
 
         await self._session.commit()
-        await self._session.refresh(model, attribute_names=["attachments"])
         return _to_entity(model), was_created
 
   

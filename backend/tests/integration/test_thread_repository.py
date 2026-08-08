@@ -1,15 +1,6 @@
-"""Integration tests for ThreadRepository — real PostgreSQL required.
-
-Skips gracefully via the `db_engine` fixture (tests/conftest.py) when
-no live Postgres is reachable, same policy as
-test_email_repository.py. Correlated-subquery counts, pagination, and
-sort ordering are exactly the kind of thing a fake-in-memory unit test
-can silently get wrong relative to real SQL.
-"""
-
 import uuid
 from datetime import UTC, datetime, timedelta
-
+import pytest_asyncio
 import pytest
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
@@ -57,9 +48,13 @@ def session_factory(prepared_db: AsyncEngine) -> async_sessionmaker[AsyncSession
     return async_sessionmaker(bind=prepared_db, expire_on_commit=False)
 
 
-@pytest.fixture
-def repo(session_factory: async_sessionmaker[AsyncSession]) -> ThreadRepository:
-    return ThreadRepository(session_factory())
+@pytest_asyncio.fixture
+async def repo(session_factory: async_sessionmaker[AsyncSession]):
+    session = session_factory()
+    try:
+        yield ThreadRepository(session)
+    finally:
+        await session.close()
 
 
 async def _create_user(session_factory: async_sessionmaker[AsyncSession]) -> uuid.UUID:

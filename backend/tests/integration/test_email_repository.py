@@ -1,6 +1,6 @@
 import uuid
 from datetime import UTC, datetime, timedelta
-
+import pytest_asyncio
 import pytest
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
@@ -33,16 +33,7 @@ async def prepared_db(db_engine: AsyncEngine):
         )
     yield db_engine
     async with db_engine.begin() as conn:
-        await conn.run_sync(
-            Base.metadata.drop_all,
-            tables=[
-                AttachmentModel.__table__,
-                EmailModel.__table__,
-                ThreadModel.__table__,
-                UserModel.__table__,
-            ],
-        )
-        await conn.execute(text("DROP TYPE IF EXISTS user_status"))
+        await conn.run_sync(Base.metadata.drop_all, tables=[AttachmentModel.__table__, EmailModel.__table__, ThreadModel.__table__, UserModel.__table__])
 
 
 @pytest.fixture
@@ -50,9 +41,13 @@ def session_factory(prepared_db: AsyncEngine) -> async_sessionmaker[AsyncSession
     return async_sessionmaker(bind=prepared_db, expire_on_commit=False)
 
 
-@pytest.fixture
-def repo(session_factory: async_sessionmaker[AsyncSession]) -> EmailRepository:
-    return EmailRepository(session_factory())
+@pytest_asyncio.fixture
+async def repo(session_factory: async_sessionmaker[AsyncSession]):
+    session = session_factory()
+    try:
+        yield EmailRepository(session)
+    finally:
+        await session.close()
 
 
 async def _create_user(session_factory: async_sessionmaker[AsyncSession]) -> uuid.UUID:

@@ -20,5 +20,6 @@ pytest
 pytest-asyncio
 pytest-cov
 structlog
-email-validators
+email-validator
 asyncpg
+pgvector

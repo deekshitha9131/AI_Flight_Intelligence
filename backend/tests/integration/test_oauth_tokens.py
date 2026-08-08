@@ -1,13 +1,5 @@
-"""Integration tests for UserRepository's save_oauth_tokens / get_oauth_tokens.
-
-Real PostgreSQL required — skips gracefully when unavailable, same
-policy as the rest of the integration suite. This is the one place the
-full encrypt-on-write / decrypt-on-read path is tested against an
-actual database, not a fake.
-"""
-
 from datetime import UTC, datetime, timedelta
-
+import pytest_asyncio
 import pytest
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncEngine, async_sessionmaker
@@ -38,10 +30,14 @@ async def prepared_db(db_engine: AsyncEngine):
         await conn.execute(text("DROP TYPE IF EXISTS user_status"))
 
 
-@pytest.fixture
-def repo(prepared_db: AsyncEngine) -> UserRepository:
+@pytest_asyncio.fixture
+async def repo(prepared_db: AsyncEngine):
     session_factory = async_sessionmaker(bind=prepared_db, expire_on_commit=False)
-    return UserRepository(session_factory(), TokenCipher(get_settings()))
+    session = session_factory()
+    try:
+        yield UserRepository(session, TokenCipher(get_settings()))
+    finally:
+        await session.close()
 
 
 async def test_save_and_get_oauth_tokens_round_trip(repo: UserRepository) -> None:

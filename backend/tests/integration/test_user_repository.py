@@ -1,17 +1,5 @@
-"""Integration tests for UserRepository — real PostgreSQL required.
-
-Skips gracefully via the `db_engine` fixture (tests/conftest.py) when no
-live Postgres is reachable, same policy as the rest of the integration
-suite. Exercises the actual migration (0002_create_users_table) by
-creating/dropping the real `users` table per test, not a hand-rolled
-throwaway table — this is deliberately the one integration suite in the
-project that tests the migration and the model together, since a
-mismatch between them is exactly the kind of bug unit tests (which
-never touch a real schema) cannot catch.
-"""
-
 import uuid
-
+import pytest_asyncio
 import pytest
 from sqlalchemy.ext.asyncio import AsyncEngine, async_sessionmaker
 
@@ -41,10 +29,14 @@ async def prepared_db(db_engine: AsyncEngine):
         await conn.execute(text("DROP TYPE IF EXISTS user_status"))
 
 
-@pytest.fixture
-def repo(prepared_db: AsyncEngine) -> UserRepository:
+@pytest_asyncio.fixture
+async def repo(prepared_db: AsyncEngine):
     session_factory = async_sessionmaker(bind=prepared_db, expire_on_commit=False)
-    return UserRepository(session_factory(), TokenCipher(get_settings()))
+    session = session_factory()
+    try:
+        yield UserRepository(session, TokenCipher(get_settings()))
+    finally:
+        await session.close()
 
 
 async def test_create_and_get_by_id(repo: UserRepository) -> None:
