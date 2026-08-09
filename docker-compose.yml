@@ -1,16 +1,5 @@
-networks:
-
-  app_network:
-    driver: bridge
-    name: ${COMPOSE_PROJECT_NAME:-ai-email-assistant}_network
-
-volumes:
-  postgres_data:
-    name: ${COMPOSE_PROJECT_NAME:-ai-email-assistant}_postgres_data
-  redis_data:
-    name: ${COMPOSE_PROJECT_NAME:-ai-email-assistant}_redis_data
-
 services:
+
   postgres:
     image: pgvector/pgvector:pg16
     container_name: ${COMPOSE_PROJECT_NAME:-ai-email-assistant}-postgres
@@ -246,3 +235,14 @@ services:
       timeout: 5s
       retries: 3
       start_period: 10s
+
+networks:
+  app_network:
+    driver: bridge
+    name: ${COMPOSE_PROJECT_NAME:-ai-email-assistant}_network
+
+volumes:
+  postgres_data:
+    name: ${COMPOSE_PROJECT_NAME:-ai-email-assistant}_postgres_data
+  redis_data:
+    name: ${COMPOSE_PROJECT_NAME:-ai-email-assistant}_redis_data

@@ -1,6 +1,7 @@
 from uuid import UUID
 
 from sqlalchemy import func, select
+from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.application.dto.thread import ThreadSummary
@@ -132,6 +133,7 @@ class ThreadRepository:
        
         stmt = (
             select(EmailModel)
+            .options(selectinload(EmailModel.attachments))
             .where(EmailModel.thread_id == thread_id, EmailModel.user_id == user_id)
             .order_by(EmailModel.received_at.asc())
         )

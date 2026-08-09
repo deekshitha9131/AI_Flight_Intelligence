@@ -14,7 +14,8 @@ _redis_client: redis.Redis | None = None  # type: ignore[type-arg]
 
 
 def init_worker_resources(settings: Settings) -> None:
-    global _engine, _session_factory, _redis_client
+    global _engine, _session_factory, _redis_client, _loop
+    _loop = asyncio.new_event_loop()
     _engine = create_db_engine(settings)
     _session_factory = create_session_factory(_engine)
     _redis_client = create_redis_client(settings)
@@ -37,10 +38,39 @@ async def dispose_worker_resources_async() -> None:
 
 
 def dispose_worker_resources() -> None:
-    """Release worker resources from a synchronous Celery signal handler."""
+    """Release worker resources from a synchronous Celery signal handler.
 
-    asyncio.run(dispose_worker_resources_async())
+    Runs disposal on the same persistent loop every task used, then
+    closes that loop — not a fresh asyncio.run(), which would try to
+    close connections from a loop that never opened them.
+    """
+    global _loop
+    if _loop is None:
+        return
+    try:
+        _loop.run_until_complete(dispose_worker_resources_async())
+    finally:
+        _loop.close()
+        _loop = None
 
+def get_worker_loop() -> asyncio.AbstractEventLoop:
+    """Return this process's single persistent event loop.
+
+    Every task's coroutine — and eventual resource disposal — runs on
+    this same loop for the worker process's whole lifetime, rather
+    than a fresh loop per call. The Redis client and SQLAlchemy engine
+    open real connections lazily, permanently bound to whichever loop
+    is running the first time they're used; a fresh loop per task
+    would silently strand those connections the moment that task's
+    loop closed, breaking every subsequent task and shutdown cleanup.
+    """
+    if _loop is None:
+        raise RuntimeError(
+            "Worker event loop is not initialized. This should only "
+            "happen if a task runs before worker_process_init has "
+            "completed, which indicates a startup-ordering bug."
+        )
+    return _loop
 
 def get_session_factory() -> async_sessionmaker[AsyncSession]:
     """Return this process's session factory.
@@ -68,3 +98,4 @@ def get_redis_client() -> redis.Redis:  # type: ignore[type-arg]
             "completed, which indicates a startup-ordering bug."
         )
     return _redis_client
+init_worker_resources

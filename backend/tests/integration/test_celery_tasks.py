@@ -19,7 +19,7 @@ async def eager_celery_app(redis_available: bool, settings):  # type: ignore[no-
     try:
         yield celery_app
     finally:
-        await worker_state.dispose_worker_resources_async()
+        worker_state.dispose_worker_resources_async()
 
         celery_app.conf.task_always_eager = False
         celery_app.conf.task_eager_propagates = False

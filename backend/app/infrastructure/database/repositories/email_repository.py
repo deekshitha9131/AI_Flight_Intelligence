@@ -105,14 +105,20 @@ class EmailRepository:
     
 
     async def get_by_id(self, email_id: UUID) -> Email | None:
-        stmt = select(EmailModel).where(EmailModel.id == email_id)
+        stmt = (
+            select(EmailModel)
+            .options(selectinload(EmailModel.attachments))
+            .where(EmailModel.id == email_id)
+        )
         result = await self._session.execute(stmt)
         model = result.scalar_one_or_none()
         return _to_entity(model) if model is not None else None
 
     async def get_by_gmail_message_id(self, user_id: UUID, gmail_message_id: str) -> Email | None:
-        stmt = select(EmailModel).where(
-            EmailModel.user_id == user_id, EmailModel.gmail_message_id == gmail_message_id
+        stmt = (
+            select(EmailModel)
+            .options(selectinload(EmailModel.attachments))
+            .where(EmailModel.user_id == user_id, EmailModel.gmail_message_id == gmail_message_id)
         )
         result = await self._session.execute(stmt)
         model = result.scalar_one_or_none()
@@ -121,6 +127,7 @@ class EmailRepository:
     async def get_by_gmail_thread_id(self, user_id: UUID, gmail_thread_id: str) -> list[Email]:
         stmt = (
             select(EmailModel)
+            .options(selectinload(EmailModel.attachments))
             .join(ThreadModel, EmailModel.thread_id == ThreadModel.id)
             .where(EmailModel.user_id == user_id, ThreadModel.gmail_thread_id == gmail_thread_id)
             .order_by(EmailModel.received_at.asc())
@@ -145,7 +152,7 @@ class EmailRepository:
             raise ValueError(f"page_size must be >= 1, got {page_size}")
 
         stmt = _apply_filters(
-            select(EmailModel),
+            select(EmailModel).options(selectinload(EmailModel.attachments)),
             user_id=user_id,
             is_read=is_read,
             is_starred=is_starred,
@@ -187,7 +194,11 @@ class EmailRepository:
         if page_size < 1:
             raise ValueError(f"page_size must be >= 1, got {page_size}")
 
-        stmt = _apply_search(select(EmailModel), user_id=user_id, query=query)
+        stmt = _apply_search(
+            select(EmailModel).options(selectinload(EmailModel.attachments)),
+            user_id=user_id,
+            query=query,
+        )
         stmt = (
             stmt.order_by(EmailModel.received_at.desc())
             .limit(page_size)
