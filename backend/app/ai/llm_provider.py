@@ -27,7 +27,7 @@ class LLMProvider(ABC):
         self,
         *,
         messages: list[dict[str, str]],
-        max_tokens: int = 512,
+        max_tokens: int = 1024,
     ) -> tuple[str, int | None]:
         """Generate a completion.
 
@@ -46,26 +46,32 @@ class GeminiProvider(LLMProvider):
     def __init__(
         self,
         api_key: str,
-        model: str = "gemini-3.6-flash",
+        model: str = "gemini-3.1-flash-lite",
         base_url: str = "",
     ) -> None:
         self._api_key = api_key
         self._model = model
         self._base_url = base_url
+        self._client = None
+
+    def _get_client(self):
+        if self._client is None:
+            from google import genai
+            self._client = genai.Client(api_key=self._api_key)
+        return self._client
 
     async def complete(
         self,
         *,
         messages: list[dict[str, str]],
-        max_tokens: int = 512,
+        max_tokens: int = 1024,
     ) -> tuple[str, int | None]:
         t0 = time.monotonic()
         logger.info("[LLM START] GeminiProvider.complete | model=%s", self._model)
         try:
-            from google import genai
             from google.genai import types
 
-            client = genai.Client(api_key=self._api_key)
+            client = self._get_client()
 
             system_instruction: str | None = None
             contents = []
@@ -90,6 +96,7 @@ class GeminiProvider(LLMProvider):
                 system_instruction=system_instruction,
                 max_output_tokens=max_tokens,
                 temperature=0.7,
+                http_options=types.HttpOptions(timeout=15000),
             )
 
             logger.info("[LLM DISPATCH] client.aio.models.generate_content initiating...")
@@ -137,7 +144,7 @@ class FallbackProvider(LLMProvider):
         self,
         *,
         messages: list[dict[str, str]],
-        max_tokens: int = 512,
+        max_tokens: int = 1024,
     ) -> tuple[str, int | None]:
         user_msg = next(
             (m["content"] for m in reversed(messages) if m["role"] == "user"),
@@ -162,7 +169,7 @@ def build_llm_provider() -> LLMProvider:
     ).strip()
 
     if api_key:
-        model: str = (getattr(settings, "gemini_model", "gemini-3.6-flash") or "gemini-3.6-flash").strip()
+        model: str = (getattr(settings, "gemini_model", "gemini-3.1-flash-lite") or "gemini-3.1-flash-lite").strip()
         base_url: str = (getattr(settings, "gemini_base_url", "") or "").strip()
         logger.info("LLM provider: Gemini (model=%s)", model)
         return GeminiProvider(api_key=api_key, model=model, base_url=base_url)
@@ -173,4 +180,6 @@ def build_llm_provider() -> LLMProvider:
 
 def get_system_prompt() -> str:
     """Return the system prompt injected at the start of every conversation."""
-    return _SYSTEM_PROMPT
+    from datetime import date
+    today_str = date.today().isoformat()
+    return f"{_SYSTEM_PROMPT}\n\nToday's date is {today_str}."

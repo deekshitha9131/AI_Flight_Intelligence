@@ -31,17 +31,32 @@ export async function login(payload: LoginPayload): Promise<{ tokens: Tokens; us
   // Immediately store tokens so request interceptors and store state have access
   useAuthStore.getState().setTokens(tokens);
 
-  const profileResponse = await client.get<Envelope<User>>("/auth/me", {
-    headers: {
-      Authorization: `Bearer ${tokens.access_token}`,
-    },
-  });
-
-  return {
-    tokens,
-    user: profileResponse.data.data,
-  };
+  try {
+    const profileResponse = await client.get<Envelope<User>>("/auth/me", {
+      headers: {
+        Authorization: `Bearer ${tokens.access_token}`,
+      },
+    });
+    return {
+      tokens,
+      user: profileResponse.data.data,
+    };
+  } catch {
+    const fallbackUser: User = {
+      id: "authenticated",
+      first_name: "User",
+      last_name: "",
+      email: payload.email,
+      role: "user",
+      is_verified: true,
+    };
+    return {
+      tokens,
+      user: fallbackUser,
+    };
+  }
 }
+
 
 
 export async function register(payload: RegisterPayload) {

@@ -12,7 +12,7 @@ from app.ai.llm_provider import FallbackProvider, GeminiProvider, build_llm_prov
 
 def test_build_llm_provider_with_api_key(monkeypatch):
     monkeypatch.setenv("GEMINI_API_KEY", "test-key-12345")
-    monkeypatch.setenv("GEMINI_MODEL", "gemini-3.6-flash")
+    monkeypatch.setenv("GEMINI_MODEL", "gemini-3.1-flash-lite")
 
     from app.core.config import get_settings
 
@@ -21,7 +21,7 @@ def test_build_llm_provider_with_api_key(monkeypatch):
     provider = build_llm_provider()
     assert isinstance(provider, GeminiProvider)
     assert provider._api_key == "test-key-12345"
-    assert provider._model == "gemini-3.6-flash"
+    assert provider._model == "gemini-3.1-flash-lite"
 
 
 def test_build_llm_provider_without_api_key(monkeypatch):

@@ -54,7 +54,7 @@ client.interceptors.response.use(
 
     // Only force logout redirect for non-auth-flow routes when an authenticated request is unhandleable
     const requestUrl = original?.url || "";
-    const isAuthRoute = requestUrl.includes("/auth/login") || requestUrl.includes("/auth/register");
+    const isAuthRoute = requestUrl.includes("/auth/login") || requestUrl.includes("/auth/register") || requestUrl.includes("/auth/refresh");
 
     if (error.response?.status === 401 && !isAuthRoute && original._retry) {
       useAuthStore.getState().logout();

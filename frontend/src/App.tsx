@@ -87,18 +87,22 @@ export function App() {
 
     getCurrentUser()
       .then((response) => {
-        if (!cancelled) {
+        if (!cancelled && response?.data) {
           setAuth({ tokens, user: response.data });
         }
       })
-      .catch(() => {
+      .catch((err: unknown) => {
         if (!cancelled) {
-          logout();
-          if (typeof window !== "undefined" && !window.location.pathname.startsWith("/login") && !window.location.pathname.startsWith("/register")) {
-            window.location.assign("/login");
+          const status = (err as { response?: { status?: number } })?.response?.status;
+          if (status === 401) {
+            logout();
+            if (typeof window !== "undefined" && !window.location.pathname.startsWith("/login") && !window.location.pathname.startsWith("/register")) {
+              window.location.assign("/login");
+            }
           }
         }
       });
+
 
     return () => {
       cancelled = true;

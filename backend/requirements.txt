@@ -17,3 +17,5 @@ joblib==1.4.2
 numpy==1.26.4
 pandas==2.2.2
 openai==1.35.0
+google-genai>=1.0.0
+

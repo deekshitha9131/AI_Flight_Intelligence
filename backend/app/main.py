@@ -11,25 +11,26 @@ backend_dir = Path(__file__).resolve().parent.parent
 if str(backend_dir) not in sys.path:
     sys.path.insert(0, str(backend_dir))
 
-from app.ai.llm_provider import build_llm_provider
-from app.ai.model_loader import ModelLoader
-from app.api.v1.endpoints.health import router as health_router
-from app.api.v1.router import router as v1_router
-from app.core.config import get_settings
-from app.core.logging import setup_logging
-from app.database.base import Base
-from app.database.session import check_database_connection, engine
-from app.exceptions.base import AppException
-from app.exceptions.handlers import (
+from .ai.llm_provider import build_llm_provider
+from .ai.model_loader import ModelLoader
+from .api.v1.endpoints.health import router as health_router
+from .api.v1.router import router as v1_router
+from .core.config import get_settings
+from .core.logging import setup_logging
+from .database.base import Base
+from .database.session import check_database_connection, engine
+from .exceptions.base import AppException
+from .exceptions.handlers import (
     app_exception_handler,
     http_exception_handler,
     sqlalchemy_exception_handler,
     unexpected_exception_handler,
     validation_exception_handler,
 )
-from app.integrations.amadeus.client import AmadeusClient
-from app.middleware.process_time import ProcessTimeMiddleware
-from app.middleware.request_logging import RequestLoggingMiddleware
+from .integrations.amadeus.client import AmadeusClient
+from .middleware.process_time import ProcessTimeMiddleware
+from .middleware.request_logging import RequestLoggingMiddleware
+
 from fastapi import FastAPI, Response
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware

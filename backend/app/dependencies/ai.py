@@ -19,8 +19,14 @@ from sqlalchemy.orm import Session
 
 
 def get_model_loader(request: Request) -> ModelLoader:
-    """Return the ModelLoader stored on app.state at startup."""
-    return getattr(request.app.state, "model_loader", None)
+    """Return the ModelLoader stored on app.state at startup, initializing a singleton if uninitialized."""
+    loader = getattr(request.app.state, "model_loader", None)
+    if loader is None:
+        from app.ai.model_loader import get_model_loader as _get_singleton
+        loader = _get_singleton()
+        request.app.state.model_loader = loader
+    return loader
+
 
 
 def get_llm_provider(request: Request) -> LLMProvider:

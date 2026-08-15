@@ -57,7 +57,7 @@ class Settings(BaseSettings):
 
     # AI (Gemini Integration)
     gemini_api_key: str = Field(default="")
-    gemini_model: str = Field(default="gemini-3.6-flash")
+    gemini_model: str = Field(default="gemini-3.1-flash-lite")
     gemini_base_url: str = Field(
         default="https://generativelanguage.googleapis.com/v1beta/openai/"
     )
