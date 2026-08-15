@@ -40,6 +40,7 @@ router = APIRouter(prefix="/flights/favorites", tags=["favorites"])
         409: {"description": "Flight offer already saved in favourites."},
     },
 )
+@router.post("/", include_in_schema=False, response_model=FavoriteDetailResponse, status_code=status.HTTP_201_CREATED)
 async def save_favorite(
     payload: SaveFavoriteRequest,
     current_user: User = Depends(get_current_user),
@@ -64,6 +65,7 @@ async def save_favorite(
         401: {"description": "Authentication required."},
     },
 )
+@router.get("/", include_in_schema=False, response_model=FavoriteListResponse, status_code=status.HTTP_200_OK)
 async def list_favorites(
     page: int = Query(1, ge=1, description="Page number (1-based)."),
     page_size: int = Query(10, ge=1, le=100, description="Records per page."),

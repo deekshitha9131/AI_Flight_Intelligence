@@ -1,3 +1,4 @@
+import logging
 from collections.abc import Generator
 from typing import Any
 
@@ -7,12 +8,18 @@ from sqlalchemy import create_engine, text
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session, sessionmaker
 
+logger = logging.getLogger(__name__)
 settings = get_settings()
+
+connect_args = {}
+if settings.database_url.startswith("sqlite"):
+    connect_args["check_same_thread"] = False
 
 engine: Engine = create_engine(
     settings.database_url,
-    pool_pre_ping=True,
-    pool_recycle=1800,
+    connect_args=connect_args,
+    pool_pre_ping=True if not settings.database_url.startswith("sqlite") else False,
+    pool_recycle=1800 if not settings.database_url.startswith("sqlite") else -1,
     echo=settings.environment == "development",
     future=True,
 )
@@ -49,5 +56,7 @@ def check_database_connection() -> bool:
         with engine.connect() as connection:
             connection.execute(text("SELECT 1"))
         return True
-    except Exception:
+    except Exception as exc:
+        logger.error("Database connection check failed: %s", exc)
         return False
+

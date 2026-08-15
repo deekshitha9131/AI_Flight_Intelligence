@@ -2,10 +2,11 @@ from __future__ import annotations
 
 import logging
 import math
+import time
 from uuid import UUID
 
 from app.ai.llm_provider import LLMProvider, get_system_prompt
-from app.exceptions.base import NotFoundException
+from app.exceptions.base import ExternalAPIException, NotFoundException
 from app.repositories.chat_repository import ChatRepository
 from app.schemas.assistant import (
     ChatMessageItem,
@@ -56,6 +57,8 @@ class AssistantService:
     ) -> ChatResponse:
         """Process a user message and return the assistant reply."""
         # Resolve or create conversation
+        t0 = time.monotonic()
+        logger.info("[STEP 2] RESOLVING CONVERSATION START | conv_id=%s", conversation_id)
         if conversation_id is not None:
             conversation = self._chat_repo.get_conversation(
                 conversation_id=conversation_id, user_id=user_id
@@ -68,31 +71,45 @@ class AssistantService:
             conversation = self._chat_repo.create_conversation(
                 user_id=user_id, title=title
             )
+        logger.info("[STEP 2] RESOLVING CONVERSATION COMPLETED | elapsed=%.2fms", (time.monotonic() - t0) * 1000)
 
         # Persist user message
+        t1 = time.monotonic()
+        logger.info("[STEP 3] PERSIST USER MESSAGE START")
         self._chat_repo.add_message(
             conversation_id=conversation.id,
             role="user",
             content=message,
         )
+        logger.info("[STEP 3] PERSIST USER MESSAGE COMPLETED | elapsed=%.2fms", (time.monotonic() - t1) * 1000)
 
         # Build context window for LLM
+        t2 = time.monotonic()
+        logger.info("[STEP 4] BUILDING LLM CONTEXT START")
         history = self._chat_repo.get_messages(
             conversation_id=conversation.id, limit=_CONTEXT_WINDOW + 1
         )
         llm_messages = [{"role": "system", "content": get_system_prompt()}]
         for msg in history:
             llm_messages.append({"role": msg.role, "content": msg.content})
+        logger.info("[STEP 4] BUILDING LLM CONTEXT COMPLETED | msg_count=%d elapsed=%.2fms", len(llm_messages), (time.monotonic() - t2) * 1000)
 
         # Call LLM
+        t3 = time.monotonic()
+        logger.info("[STEP 5] CALLING LLM PROVIDER START | provider=%s", type(self._llm).__name__)
         try:
             reply, tokens = await self._llm.complete(messages=llm_messages)
+            logger.info("[STEP 6] LLM CALL COMPLETED | tokens=%s elapsed=%.2fms", tokens, (time.monotonic() - t3) * 1000)
         except Exception as exc:
-            logger.error("AssistantService.chat | LLM error: %s", exc)
-            reply = "I'm sorry, I encountered an error processing your request. Please try again."
-            tokens = None
+            logger.error("[STEP 6 ERROR] LLM CALL FAILED after %.2fms | error: %s", (time.monotonic() - t3) * 1000, exc, exc_info=True)
+            raise ExternalAPIException(
+                message=f"AI Assistant service error: {exc}",
+                details={"error_class": exc.__class__.__name__},
+            ) from exc
 
         # Persist assistant reply
+        t4 = time.monotonic()
+        logger.info("[STEP 8] DB PERSIST ASSISTANT REPLY START")
         self._chat_repo.add_message(
             conversation_id=conversation.id,
             role="assistant",
@@ -100,6 +117,7 @@ class AssistantService:
             tokens_used=tokens,
         )
         self._chat_repo.touch_conversation(conversation_id=conversation.id)
+        logger.info("[STEP 8] DB PERSIST ASSISTANT REPLY COMPLETED | elapsed=%.2fms", (time.monotonic() - t4) * 1000)
 
         logger.info(
             "AssistantService.chat | user=%s conv=%s tokens=%s",

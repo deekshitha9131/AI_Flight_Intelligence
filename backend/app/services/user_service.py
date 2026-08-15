@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from datetime import datetime, timezone
 from uuid import UUID
 
@@ -52,3 +53,34 @@ class UserService:
         if user is None:
             raise NotFoundException(message="User not found")
         return user
+
+    def update_user_profile(self, *, user_id: UUID, payload: UserUpdate) -> User:
+        """Partially update the authenticated user's profile and preferences."""
+        user = self.get_user_profile(user_id=user_id)
+        changes = payload.model_dump(exclude_unset=True)
+        updates: dict[str, object] = {}
+
+        if "first_name" in changes and changes["first_name"] is not None:
+            updates["first_name"] = str(changes["first_name"]).strip()
+        if "last_name" in changes and changes["last_name"] is not None:
+            updates["last_name"] = str(changes["last_name"]).strip()
+        if "phone_number" in changes:
+            updates["phone_number"] = changes["phone_number"]
+        if "profile_image" in changes:
+            updates["profile_image"] = changes["profile_image"]
+        if "preferred_airport" in changes and changes["preferred_airport"] is not None:
+            updates["preferred_airport"] = str(changes["preferred_airport"]).upper()
+        if "preferred_cabin" in changes and changes["preferred_cabin"] is not None:
+            updates["preferred_cabin"] = str(changes["preferred_cabin"]).upper()
+        if "currency_preference" in changes and changes["currency_preference"] is not None:
+            updates["currency_preference"] = str(changes["currency_preference"]).upper()
+        if "notification_settings" in changes:
+            updates["notification_settings"] = json.dumps(changes["notification_settings"])
+        if "is_active" in changes:
+            updates["is_active"] = changes["is_active"]
+        if "is_verified" in changes:
+            updates["is_verified"] = changes["is_verified"]
+        if "role" in changes and changes["role"] is not None:
+            updates["role"] = changes["role"].value if hasattr(changes["role"], "value") else changes["role"]
+
+        return self.repository.update_user(user=user, updates=updates)

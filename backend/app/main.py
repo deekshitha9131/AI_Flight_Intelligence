@@ -1,8 +1,15 @@
 from __future__ import annotations
 
 import logging
+import sys
 from contextlib import asynccontextmanager
+from pathlib import Path
 from typing import Any
+
+# Ensure the backend root directory is in sys.path for app module imports
+backend_dir = Path(__file__).resolve().parent.parent
+if str(backend_dir) not in sys.path:
+    sys.path.insert(0, str(backend_dir))
 
 from app.ai.llm_provider import build_llm_provider
 from app.ai.model_loader import ModelLoader
@@ -23,7 +30,7 @@ from app.exceptions.handlers import (
 from app.integrations.amadeus.client import AmadeusClient
 from app.middleware.process_time import ProcessTimeMiddleware
 from app.middleware.request_logging import RequestLoggingMiddleware
-from fastapi import FastAPI
+from fastapi import FastAPI, Response
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.exc import SQLAlchemyError
@@ -45,27 +52,25 @@ async def lifespan(app: FastAPI) -> Any:
         if settings.environment == "production":
             logger.info("Skipping automatic table creation in production")
         else:
-            print("=" * 80)
-            for table_name, table in Base.metadata.tables.items():
-                print(f"\nTABLE: {table_name}")
-                for idx in table.indexes:
-                    print(f"INDEX: {idx.name} -> {[c.name for c in idx.columns]}")
-            print("=" * 80)
-            Base.metadata.create_all(bind=engine)
-            logger.info("Database tables created successfully")
-
+            try:
+                Base.metadata.create_all(bind=engine)
+                logger.info("Database tables created successfully")
+            except Exception as e:
+                logger.error("Failed to create database tables: %s", e)
     else:
         logger.warning("Database connection check failed")
 
-    if settings.flight_provider.lower() == "mock":
-        logger.info("Mock Flight Provider Enabled")
-    elif settings.flight_provider.lower() == "amadeus":
-        amadeus_client = AmadeusClient.from_settings()
-        app.state.amadeus = amadeus_client
-        logger.info("Amadeus Flight Provider Enabled")
-        logger.info("AmadeusClient initialised (base_url=%s).", settings.amadeus_base_url)
+    amadeus_client: AmadeusClient | None = None
+    if settings.flight_provider.lower() == "amadeus":
+        try:
+            amadeus_client = AmadeusClient.from_settings()
+            app.state.amadeus = amadeus_client
+            logger.info("Amadeus Flight Provider Enabled")
+        except Exception as err:
+            logger.warning("Failed to initialize AmadeusClient (%s). Falling back to Mock Flight Provider.", err)
+            logger.info("Mock Flight Provider Enabled")
     else:
-        raise ValueError("Unsupported FLIGHT_PROVIDER")
+        logger.info("Mock Flight Provider Enabled")
 
     model_loader = ModelLoader()
     model_loader.load()
@@ -80,11 +85,12 @@ async def lifespan(app: FastAPI) -> Any:
     app.state.llm_provider = llm_provider
     logger.info("LLMProvider initialised: %s", type(llm_provider).__name__)
 
-    yield
-
-    if settings.flight_provider.lower() == "amadeus":
-        await amadeus_client.close()
-    logger.info("Shutting down application")
+    try:
+        yield
+    finally:
+        if amadeus_client is not None:
+            await amadeus_client.close()
+        logger.info("Shutting down application")
 
 
 app = FastAPI(
@@ -101,7 +107,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
 app.add_middleware(ProcessTimeMiddleware)
 app.add_middleware(RequestLoggingMiddleware)
 
@@ -115,7 +120,14 @@ app.add_exception_handler(SQLAlchemyError, sqlalchemy_exception_handler)
 app.add_exception_handler(Exception, unexpected_exception_handler)
 
 
+@app.get("/favicon.ico", include_in_schema=False)
+def favicon() -> Response:
+    return Response(status_code=204)
+
+
 @app.get("/", tags=["root"])
 def read_root() -> dict[str, str]:
     """Return a simple welcome payload for the API root."""
     return {"message": "AI Flight Intelligence Platform API"}
+
+

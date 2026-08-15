@@ -37,6 +37,10 @@ class User(Base):
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
     phone_number: Mapped[str | None] = mapped_column(String(20), nullable=True)
     profile_image: Mapped[str | None] = mapped_column(Text(), nullable=True)
+    preferred_airport: Mapped[str | None] = mapped_column(String(3), nullable=True)
+    preferred_cabin: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    currency_preference: Mapped[str | None] = mapped_column(String(3), nullable=True)
+    notification_settings: Mapped[str | None] = mapped_column(Text(), nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     is_verified: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     role: Mapped[str] = mapped_column(

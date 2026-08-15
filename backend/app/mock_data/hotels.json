@@ -1,0 +1,130 @@
+{
+  "hotels": [
+    {
+      "hotel_id": "htl-hyd-001",
+      "name": "Taj Krishna",
+      "city": "HYD",
+      "location": "Banjara Hills, Hyderabad, India",
+      "rating": 4.8,
+      "price_per_night": 140.0,
+      "currency": "USD",
+      "room_info": {
+        "room_type": "Deluxe King Suite",
+        "bed_type": "1 King Bed",
+        "max_occupancy": 2
+      },
+      "amenities": ["Free Wi-Fi", "Swimming Pool", "Spa & Wellness", "Airport Shuttle", "Fine Dining"],
+      "available_rooms": 8,
+      "is_available": true,
+      "image_url": "https://images.unsplash.com/photo-1566073771259-6a8506099945"
+    },
+    {
+      "hotel_id": "htl-hyd-002",
+      "name": "Novotel Hyderabad Airport",
+      "city": "HYD",
+      "location": "Rajiv Gandhi Intl Airport, Hyderabad, India",
+      "rating": 4.5,
+      "price_per_night": 95.0,
+      "currency": "USD",
+      "room_info": {
+        "room_type": "Executive Double Room",
+        "bed_type": "2 Queen Beds",
+        "max_occupancy": 4
+      },
+      "amenities": ["Free Airport Shuttle", "24/7 Gym", "Outdoor Pool", "Breakfast Included"],
+      "available_rooms": 12,
+      "is_available": true,
+      "image_url": "https://images.unsplash.com/photo-1582719478250-c89cae4dc85b"
+    },
+    {
+      "hotel_id": "htl-dxb-001",
+      "name": "Burj Al Arab Jumeirah",
+      "city": "DXB",
+      "location": "Jumeirah Beach Road, Dubai, United Arab Emirates",
+      "rating": 4.9,
+      "price_per_night": 980.0,
+      "currency": "USD",
+      "room_info": {
+        "room_type": "Ocean Luxury Suite",
+        "bed_type": "1 Super King Bed",
+        "max_occupancy": 2
+      },
+      "amenities": ["Private Beach", "Helipad", "Butler Service", "Infinity Pool", "Michelin Dining"],
+      "available_rooms": 3,
+      "is_available": true,
+      "image_url": "https://images.unsplash.com/photo-1542314831-068cd1dbfeeb"
+    },
+    {
+      "hotel_id": "htl-dxb-002",
+      "name": "JW Marriott Marquis Hotel Dubai",
+      "city": "DXB",
+      "location": "Business Bay, Sheikh Zayed Road, Dubai, UAE",
+      "rating": 4.7,
+      "price_per_night": 220.0,
+      "currency": "USD",
+      "room_info": {
+        "room_type": "Deluxe Skyline Room",
+        "bed_type": "1 King Bed",
+        "max_occupancy": 2
+      },
+      "amenities": ["Rooftop Bar", "Saray Spa", "Outdoor Pool", "Valet Parking", "Free High-Speed Wi-Fi"],
+      "available_rooms": 15,
+      "is_available": true,
+      "image_url": "https://images.unsplash.com/photo-1571896349842-33c89424de2d"
+    },
+    {
+      "hotel_id": "htl-del-001",
+      "name": "The Leela Palace New Delhi",
+      "city": "DEL",
+      "location": "Chanakyapuri, Diplomatic Enclave, New Delhi, India",
+      "rating": 4.9,
+      "price_per_night": 210.0,
+      "currency": "USD",
+      "room_info": {
+        "room_type": "Grand Deluxe Room",
+        "bed_type": "1 King Bed",
+        "max_occupancy": 2
+      },
+      "amenities": ["Rooftop Pool", "ESP A Spa", "Luxury Airport Transfers", "5 Star Restaurants"],
+      "available_rooms": 6,
+      "is_available": true,
+      "image_url": "https://images.unsplash.com/photo-1566073771259-6a8506099945"
+    },
+    {
+      "hotel_id": "htl-lhr-001",
+      "name": "The Ritz London",
+      "city": "LHR",
+      "location": "150 Piccadilly, St. James's, London, UK",
+      "rating": 4.8,
+      "price_per_night": 650.0,
+      "currency": "USD",
+      "room_info": {
+        "room_type": "Superior King Room",
+        "bed_type": "1 King Bed",
+        "max_occupancy": 2
+      },
+      "amenities": ["Afternoon Tea", "Casino", "Michelin Star Restaurant", "Concierge Service"],
+      "available_rooms": 5,
+      "is_available": true,
+      "image_url": "https://images.unsplash.com/photo-1582719478250-c89cae4dc85b"
+    },
+    {
+      "hotel_id": "htl-sin-001",
+      "name": "Marina Bay Sands",
+      "city": "SIN",
+      "location": "10 Bayfront Avenue, Singapore",
+      "rating": 4.8,
+      "price_per_night": 520.0,
+      "currency": "USD",
+      "room_info": {
+        "room_type": "Sands Premier Room",
+        "bed_type": "1 King Bed",
+        "max_occupancy": 3
+      },
+      "amenities": ["World Famous Infinity Pool", "SkyPark Observation Deck", "Casino", "Luxury Shopping Mall"],
+      "available_rooms": 10,
+      "is_available": true,
+      "image_url": "https://images.unsplash.com/photo-1542314831-068cd1dbfeeb"
+    }
+  ]
+}

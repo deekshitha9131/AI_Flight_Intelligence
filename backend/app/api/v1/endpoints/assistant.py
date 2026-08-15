@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import time
 from uuid import UUID
 
 from app.dependencies.ai import get_assistant_service
@@ -29,13 +30,13 @@ router = APIRouter(prefix="/assistant", tags=["assistant"])
     description=(
         "Send a message to the AI travel assistant and receive a contextual reply. "
         "Omit `conversation_id` to start a new conversation; include it to continue "
-        "an existing thread.\\n\\n"
-        "The assistant can help with:\\n"
-        "- Flight search and booking advice\\n"
-        "- Fare rules and baggage policies\\n"
-        "- Destination recommendations\\n"
-        "- Price trends and booking windows\\n"
-        "- Travel planning\\n\\n"
+        "an existing thread.\n\n"
+        "The assistant can help with:\n"
+        "- Flight search and booking advice\n"
+        "- Fare rules and baggage policies\n"
+        "- Destination recommendations\n"
+        "- Price trends and booking windows\n"
+        "- Travel planning\n\n"
         "**Authentication required.**"
     ),
     responses={
@@ -49,11 +50,16 @@ async def chat(
     service: AssistantService = Depends(get_assistant_service),
 ) -> ChatResponse:
     """Send a message to the AI travel assistant."""
-    return await service.chat(
+    start_t = time.monotonic()
+    logger.info("[STEP 1] ASSISTANT REQUEST RECEIVED | user_id=%s message=%s", current_user.id, payload.message)
+    res = await service.chat(
         user_id=current_user.id,
         message=payload.message,
         conversation_id=payload.conversation_id,
     )
+    elapsed_ms = (time.monotonic() - start_t) * 1000
+    logger.info("[STEP 10] ASSISTANT RESPONSE GENERATED | total_elapsed=%.2fms", elapsed_ms)
+    return res
 
 
 @router.get(

@@ -7,6 +7,8 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 BASE_DIR = Path(__file__).resolve().parents[2]
 ENV_FILE = BASE_DIR / ".env"
+CWD_ENV_FILE = Path.cwd() / ".env"
+ENV_FILES = [str(f) for f in (ENV_FILE, CWD_ENV_FILE) if f.exists()] or [str(ENV_FILE)]
 
 
 class Settings(BaseSettings):
@@ -15,7 +17,7 @@ class Settings(BaseSettings):
     """
 
     model_config = SettingsConfigDict(
-        env_file=ENV_FILE,
+        env_file=ENV_FILES,
         env_file_encoding="utf-8",
         extra="ignore",
         case_sensitive=False,
@@ -44,7 +46,7 @@ class Settings(BaseSettings):
         default="http://localhost:3000,http://localhost:5173,http://127.0.0.1:3000,http://127.0.0.1:5173"
     )
 
-    # Amadeus
+    # Amadeus (Optional / Deprecated in favor of Mock Data)
     amadeus_api_key: str = Field(default="")
     amadeus_api_secret: str = Field(default="")
     amadeus_base_url: str = Field(default="https://test.api.amadeus.com")
@@ -53,7 +55,12 @@ class Settings(BaseSettings):
     # Flight provider
     flight_provider: str = Field(default="mock")
 
-    # AI
+    # AI (Gemini Integration)
+    gemini_api_key: str = Field(default="")
+    gemini_model: str = Field(default="gemini-3.6-flash")
+    gemini_base_url: str = Field(
+        default="https://generativelanguage.googleapis.com/v1beta/openai/"
+    )
     openai_api_key: str = Field(default="")
     openai_model: str = Field(default="gpt-3.5-turbo")
 

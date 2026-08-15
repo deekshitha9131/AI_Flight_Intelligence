@@ -37,7 +37,7 @@ def save_model(model: Any, version: str) -> Path:
     """
     path = MODELS_DIR / f"{MODEL_FILE_PREFIX}_v{version}.joblib"
     joblib.dump(model, path)
-    logger.info("Model saved → %s", path)
+    logger.info("Model saved -> %s", path)
     return path
 
 
@@ -45,7 +45,7 @@ def save_pipeline(pipeline: Any, version: str) -> Path:
     """Serialise the preprocessing pipeline."""
     path = ARTIFACTS_DIR / f"{PIPELINE_FILE_PREFIX}_v{version}.joblib"
     joblib.dump(pipeline, path)
-    logger.info("Pipeline saved → %s", path)
+    logger.info("Pipeline saved -> %s", path)
     return path
 
 
@@ -53,7 +53,7 @@ def save_encoders(encoders: dict[str, Any], version: str) -> Path:
     """Serialise label encoders dict."""
     path = ARTIFACTS_DIR / f"{ENCODERS_FILE_PREFIX}_v{version}.joblib"
     joblib.dump(encoders, path)
-    logger.info("Encoders saved → %s", path)
+    logger.info("Encoders saved -> %s", path)
     return path
 
 
@@ -63,7 +63,7 @@ def save_metadata(metadata: dict[str, Any]) -> Path:
 
     metadata["saved_at"] = datetime.now(timezone.utc).isoformat()
     METADATA_FILE.write_text(json.dumps(metadata, indent=2, default=str))
-    logger.info("Metadata saved → %s", METADATA_FILE)
+    logger.info("Metadata saved -> %s", METADATA_FILE)
     return METADATA_FILE
 
 
@@ -74,7 +74,7 @@ def load_model(version: str | None = None) -> Any:
     """
     path = _resolve_artifact(MODELS_DIR, MODEL_FILE_PREFIX, version)
     model = joblib.load(path)
-    logger.info("Model loaded ← %s", path)
+    logger.info("Model loaded <- %s", path)
     return model
 
 
@@ -82,7 +82,7 @@ def load_pipeline(version: str | None = None) -> Any:
     """Load the preprocessing pipeline from ``ml/artifacts/``."""
     path = _resolve_artifact(ARTIFACTS_DIR, PIPELINE_FILE_PREFIX, version)
     pipeline = joblib.load(path)
-    logger.info("Pipeline loaded ← %s", path)
+    logger.info("Pipeline loaded <- %s", path)
     return pipeline
 
 
@@ -90,8 +90,9 @@ def load_encoders(version: str | None = None) -> dict[str, Any]:
     """Load label encoders from ``ml/artifacts/``."""
     path = _resolve_artifact(ARTIFACTS_DIR, ENCODERS_FILE_PREFIX, version)
     encoders = joblib.load(path)
-    logger.info("Encoders loaded ← %s", path)
+    logger.info("Encoders loaded <- %s", path)
     return encoders
+
 
 
 def load_metadata() -> dict[str, Any]:

@@ -181,7 +181,8 @@ HYPERPARAMS: dict = {
 # MLflow settings
 # ---------------------------------------------------------------------------
 
-MLFLOW_TRACKING_URI: str = str(ML_ROOT / "mlflow_tracking")
+MLFLOW_TRACKING_URI: str = (ML_ROOT / "mlflow_tracking").as_uri()
+
 MLFLOW_EXPERIMENT_NAME: str = "flight_price_prediction"
 MLFLOW_MODEL_NAME: str = "flight_price_model"
 

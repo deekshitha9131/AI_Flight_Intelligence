@@ -1,0 +1,43 @@
+{
+  "version": "1.0.0",
+  "model_name": "lightgbm",
+  "feature_columns": [
+    "origin_encoded",
+    "destination_encoded",
+    "airline_encoded",
+    "cabin_class_encoded",
+    "trip_type_encoded",
+    "currency_encoded",
+    "departure_time_bucket_encoded",
+    "arrival_time_bucket_encoded",
+    "route_encoded",
+    "days_until_departure",
+    "adults",
+    "children",
+    "infants",
+    "stops",
+    "flight_duration_minutes",
+    "departure_hour",
+    "arrival_hour",
+    "departure_month",
+    "departure_day_of_week",
+    "departure_week_of_year",
+    "is_weekend",
+    "is_round_trip",
+    "is_domestic",
+    "is_holiday_period",
+    "route_frequency",
+    "airline_popularity"
+  ],
+  "metrics": {
+    "mae": 1714.8574764603488,
+    "mse": 9703085.68647469,
+    "rmse": 3114.9776381981765,
+    "r2": 0.6746357281794888,
+    "mape": 4.235084594341158,
+    "prediction_latency_ms": 0.011895200004801154,
+    "cross_validation_mae": 1722.023983731305
+  },
+  "trained_at": "2026-08-13T10:13:48.584306+00:00",
+  "saved_at": "2026-08-13T10:13:48.584306+00:00"
+}

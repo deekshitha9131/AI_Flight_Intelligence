@@ -4,7 +4,7 @@ import re
 from datetime import date, datetime, time, timezone
 from enum import Enum
 from uuid import UUID
-
+from pydantic import BaseModel, ConfigDict
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 
@@ -102,7 +102,7 @@ class PredictPriceResponse(BaseModel):
 
 class PredictionResult(BaseModel):
     """Detailed prediction output returned to the caller."""
-
+    model_config = ConfigDict(protected_namespaces=())
     prediction_id: UUID = Field(..., description="Unique ID of this prediction record.")
     predicted_price: float = Field(..., description="ML-predicted total price.")
     currency: str = Field(..., description="Currency of the predicted price.")

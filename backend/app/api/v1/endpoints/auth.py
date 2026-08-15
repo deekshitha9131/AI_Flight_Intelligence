@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+
 from app.database.session import get_db
 from app.dependencies.auth import get_current_user
 from app.models.user import User
@@ -9,13 +11,39 @@ from app.schemas.auth import (
     RefreshRequest,
     RefreshResponse,
 )
-from app.schemas.user import UserCreate, UserRegistrationResponse
+from app.schemas.user import UserCreate, UserRegistrationResponse, UserUpdate
 from app.services.auth_service import AuthService
 from app.services.user_service import UserService
 from fastapi import APIRouter, Depends, Request, status
 from sqlalchemy.orm import Session
 
 router = APIRouter(prefix="/auth", tags=["auth"])
+
+
+def _serialize_user_payload(current_user: User) -> dict[str, object]:
+    return {
+        "id": str(current_user.id),
+        "first_name": current_user.first_name,
+        "last_name": current_user.last_name,
+        "email": current_user.email,
+        "role": current_user.role,
+        "is_verified": current_user.is_verified,
+        "is_active": current_user.is_active,
+        "created_at": current_user.created_at.isoformat(),
+        "profile_image": current_user.profile_image,
+        "preferred_airport": current_user.preferred_airport,
+        "preferred_cabin": current_user.preferred_cabin,
+        "currency_preference": current_user.currency_preference,
+        "notification_settings": (
+            json.loads(current_user.notification_settings)
+            if current_user.notification_settings
+            else {
+                "email": True,
+                "push": True,
+                "price_alerts": True,
+            }
+        ),
+    }
 
 
 @router.post(
@@ -101,6 +129,27 @@ async def refresh_token(
     )
 
 
+@router.put(
+    "/me",
+    status_code=status.HTTP_200_OK,
+    summary="Update the current user profile",
+    description="Update profile details and travel preferences for the authenticated user.",
+)
+async def update_current_user_profile(
+    payload: UserUpdate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> dict[str, object]:
+    """Update the authenticated user's basic profile and preference fields."""
+    service = UserService(session=db)
+    updated_user = service.update_user_profile(user_id=current_user.id, payload=payload)
+    return {
+        "success": True,
+        "message": "Profile updated successfully",
+        "data": _serialize_user_payload(updated_user),
+    }
+
+
 @router.get(
     "/me",
     status_code=status.HTTP_200_OK,
@@ -114,14 +163,5 @@ async def get_current_user_profile(
     return {
         "success": True,
         "message": "Current user retrieved successfully",
-        "data": {
-            "id": str(current_user.id),
-            "first_name": current_user.first_name,
-            "last_name": current_user.last_name,
-            "email": current_user.email,
-            "role": current_user.role,
-            "is_verified": current_user.is_verified,
-            "is_active": current_user.is_active,
-            "created_at": current_user.created_at.isoformat(),
-        },
+        "data": _serialize_user_payload(current_user),
     }

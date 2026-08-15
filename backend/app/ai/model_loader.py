@@ -1,25 +1,7 @@
 from __future__ import annotations
 
-"""ML model loader for the AI Flight Price Prediction service.
-
-Responsibilities
-----------------
-- Scan ``ml/models/`` for the latest serialised model artifact (joblib / pickle).
-- Expose a ``ModelLoader`` singleton that is initialised once during FastAPI
-  lifespan and stored on ``app.state.model_loader``.
-- Provide a ``predict()`` method that returns a raw float price estimate.
-- Fall back to a lightweight statistical estimator when no trained model is
-  found so the API remains functional during development.
-
-Model artifact convention
--------------------------
-Files must be named ``flight_price_model_v<version>.joblib`` or
-``flight_price_model_v<version>.pkl`` and placed in ``ml/models/``.
-The loader picks the lexicographically latest file so that deploying a new
-model is as simple as dropping the file into the directory.
-"""
-
 import logging
+import sys
 import time
 from hashlib import sha256
 from pathlib import Path
@@ -27,13 +9,19 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
-# Relative to the repository root (two levels above backend/)
-_ML_MODELS_DIR = Path(__file__).resolve().parents[3] / "ml" / "models"
+# Relative to the repository root (three levels above backend/app/ai)
+_REPO_ROOT = Path(__file__).resolve().parents[3]
+_ML_MODELS_DIR = _REPO_ROOT / "ml" / "models"
+
+# Ensure repo root is in sys.path so ml package classes (e.g. FeatureEngineer) can be unpickled
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
 
 # Supported serialisation formats in preference order
 _EXTENSIONS = (".joblib", ".pkl", ".pickle")
 
 _MODEL_FILE_PREFIX = "flight_price_model"
+
 
 
 class ModelLoader:
@@ -134,6 +122,13 @@ class ModelLoader:
 
             raw = self._model.predict(feature_vector)
             price = float(raw[0])
+
+            if price <= 0:
+                logger.warning(
+                    "ModelLoader.predict | model returned non-positive price (%.2f) — using statistical fallback.",
+                    price,
+                )
+                price = self._statistical_fallback(features)
 
             # Attempt confidence via predict_proba or std (ensemble models)
             confidence: float | None = None

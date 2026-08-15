@@ -202,6 +202,35 @@ class TestCurrentUser:
         assert "password" not in body_text
         assert "hash" not in body_text
 
+    async def test_me_updates_profile_preferences(
+        self, client: AsyncClient, auth_headers
+    ) -> None:
+        response = await client.put(
+            "/api/v1/auth/me",
+            headers=auth_headers,
+            json={
+                "preferred_airport": "SIN",
+                "preferred_cabin": "BUSINESS",
+                "currency_preference": "EUR",
+                "notification_settings": {
+                    "email": False,
+                    "push": True,
+                    "price_alerts": True,
+                },
+            },
+        )
+
+        assert response.status_code == 200
+        body = response.json()
+        assert body["data"]["preferred_airport"] == "SIN"
+        assert body["data"]["preferred_cabin"] == "BUSINESS"
+        assert body["data"]["currency_preference"] == "EUR"
+        assert body["data"]["notification_settings"]["email"] is False
+
+        follow_up = await client.get("/api/v1/auth/me", headers=auth_headers)
+        assert follow_up.status_code == 200
+        assert follow_up.json()["data"]["preferred_airport"] == "SIN"
+
 
 # ---------------------------------------------------------------------------
 # Refresh token tests

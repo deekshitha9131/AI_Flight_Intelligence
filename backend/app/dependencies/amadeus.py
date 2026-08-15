@@ -29,7 +29,7 @@ def _resolve_override(override: Any, request: Request) -> Any:
 
 
 def get_flight_provider(request: Request) -> FlightProvider:
-    """Return the configured flight provider implementation."""
+    """Return the configured flight provider implementation (defaults to MockProvider)."""
     settings = get_settings()
     provider_name = settings.flight_provider.lower()
 
@@ -39,13 +39,13 @@ def get_flight_provider(request: Request) -> FlightProvider:
 
     if get_amadeus_client in overrides:
         client = _resolve_override(overrides[get_amadeus_client], request)
-        return AmadeusProvider(client)
-
-    if provider_name == "mock":
+        if client is not None:
+            return AmadeusProvider(client)
         return MockProvider()
 
     if provider_name == "amadeus":
         client = get_amadeus_client(request)
-        return AmadeusProvider(client)
+        if client is not None:
+            return AmadeusProvider(client)
 
-    raise ValueError("Unsupported FLIGHT_PROVIDER")
+    return MockProvider()

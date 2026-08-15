@@ -1,0 +1,14 @@
+mlflow==2.14.3
+cffi==2.0.0
+cloudpickle==3.1.2
+defusedxml==0.7.1
+lightgbm==4.4.0
+matplotlib==3.9.0
+numpy==1.26.4
+packaging==24.2
+pandas==3.0.3
+psutil==7.2.2
+pyarrow==25.0.0
+pyyaml==6.0.3
+scikit-learn==1.5.0
+scipy==1.17.1

@@ -24,8 +24,13 @@ def get_model_loader(request: Request) -> ModelLoader:
 
 
 def get_llm_provider(request: Request) -> LLMProvider:
-    """Return the LLMProvider stored on app.state at startup."""
-    return getattr(request.app.state, "llm_provider", None)
+    """Return the LLMProvider stored on app.state at startup, falling back to build_llm_provider if uninitialized."""
+    provider = getattr(request.app.state, "llm_provider", None)
+    if provider is None:
+        from app.ai.llm_provider import build_llm_provider
+        provider = build_llm_provider()
+        request.app.state.llm_provider = provider
+    return provider
 
 
 def get_prediction_service(

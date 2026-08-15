@@ -77,7 +77,7 @@ class ValidationReport:
     def save(self, path: Path | None = None) -> Path:
         out = path or (ARTIFACTS_DIR / "validation_report.json")
         out.write_text(json.dumps(self.to_dict(), indent=2))
-        logger.info("Validation report saved → %s", out)
+        logger.info("Validation report saved -> %s", out)
         return out
 
 

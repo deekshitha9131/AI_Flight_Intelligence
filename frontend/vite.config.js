@@ -5,7 +5,7 @@ export default defineConfig(function (_a) {
     var env = loadEnv(mode, process.cwd(), "");
     var apiTarget = env.VITE_API_URL && !env.VITE_API_URL.startsWith("/")
         ? env.VITE_API_URL
-        : "http://localhost:8000";
+        : "http://127.0.0.1:8000";
     return {
         plugins: [react()],
         server: {

@@ -1,0 +1,15 @@
+{
+  "total_rows": 5000,
+  "valid_rows": 5000,
+  "invalid_rows": 0,
+  "issues": {
+    "missing_values": [
+      "Column 'return_date' has 2703 missing values (54.1%)"
+    ]
+  },
+  "warnings": [
+    "2 duplicate records detected (same route/date/airline/cabin)."
+  ],
+  "passed": false,
+  "validated_at": "2026-08-13T10:12:56.485947+00:00"
+}

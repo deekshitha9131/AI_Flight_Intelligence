@@ -1,0 +1,14 @@
+aliases: []
+creation_timestamp: 1786616028563
+current_stage: None
+description: null
+last_updated_timestamp: 1786616028563
+name: flight_price_model
+run_id: 25bba2e9d3a7433a921bc10e728260ad
+run_link: null
+source: file:///D:/AI_Flight%20_intelligence/AI_Flight_Intelligence/ml/mlflow_tracking/554789444325111316/25bba2e9d3a7433a921bc10e728260ad/artifacts/model
+status: READY
+status_message: null
+storage_location: file:///D:/AI_Flight%20_intelligence/AI_Flight_Intelligence/ml/mlflow_tracking/554789444325111316/25bba2e9d3a7433a921bc10e728260ad/artifacts/model
+user_id: null
+version: 1

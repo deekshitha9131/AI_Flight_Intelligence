@@ -24,6 +24,18 @@ class UserBase(BaseModel):
     profile_image: str | None = Field(
         default=None, description="Optional profile image URL"
     )
+    preferred_airport: str | None = Field(
+        default=None, max_length=3, description="Preferred departure airport"
+    )
+    preferred_cabin: str | None = Field(
+        default=None, max_length=20, description="Preferred cabin class"
+    )
+    currency_preference: str | None = Field(
+        default=None, max_length=3, description="Preferred currency code"
+    )
+    notification_settings: dict[str, bool] | None = Field(
+        default=None, description="Notification preferences"
+    )
     role: UserRole = Field(default=UserRole.USER, description="Assigned role")
 
     @field_validator("first_name", "last_name")
@@ -84,6 +96,10 @@ class UserUpdate(BaseModel):
     last_name: str | None = Field(default=None, min_length=1, max_length=50)
     phone_number: str | None = Field(default=None, max_length=20)
     profile_image: str | None = Field(default=None)
+    preferred_airport: str | None = Field(default=None, max_length=3)
+    preferred_cabin: str | None = Field(default=None, max_length=20)
+    currency_preference: str | None = Field(default=None, max_length=3)
+    notification_settings: dict[str, bool] | None = Field(default=None)
     is_active: bool | None = None
     is_verified: bool | None = None
     role: UserRole | None = None

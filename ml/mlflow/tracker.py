@@ -22,14 +22,24 @@ def track_training(
     try:
         import mlflow
         import mlflow.sklearn
-    except ImportError:
-        logger.warning("MLflow is not installed; skipping experiment tracking.")
-        return
-    mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
-    mlflow.set_experiment(MLFLOW_EXPERIMENT_NAME)
-    with mlflow.start_run():
-        mlflow.log_params({key: str(value) for key, value in params.items()})
-        mlflow.log_metrics(metrics)
-        mlflow.sklearn.log_model(
-            model, artifact_path="model", registered_model_name=MLFLOW_MODEL_NAME
+
+        uri = (
+            MLFLOW_TRACKING_URI
+            if MLFLOW_TRACKING_URI.startswith(("http", "file:", "sqlite:"))
+            else Path(MLFLOW_TRACKING_URI).as_uri()
         )
+        mlflow.set_tracking_uri(uri)
+        mlflow.set_experiment(MLFLOW_EXPERIMENT_NAME)
+        with mlflow.start_run():
+            mlflow.log_params({key: str(value) for key, value in params.items()})
+            mlflow.log_metrics(metrics)
+            try:
+                mlflow.sklearn.log_model(
+                    model, artifact_path="model", registered_model_name=MLFLOW_MODEL_NAME
+                )
+            except Exception as e:
+                logger.debug("MLflow model registry skipped: %s", e)
+                mlflow.sklearn.log_model(model, artifact_path="model")
+    except Exception as exc:
+        logger.warning("MLflow tracking skipped: %s", exc)
+

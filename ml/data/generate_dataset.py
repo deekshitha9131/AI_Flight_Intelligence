@@ -241,7 +241,7 @@ def save_dataset(df: pd.DataFrame, path: Path = RAW_DATASET_CSV) -> None:
     """Save the dataset to CSV."""
     path.parent.mkdir(parents=True, exist_ok=True)
     df.to_csv(path, index=False)
-    logger.info("Dataset saved → %s (%d rows)", path, len(df))
+    logger.info("Dataset saved -> %s (%d rows)", path, len(df))
 
 
 def main() -> None:
@@ -253,7 +253,8 @@ def main() -> None:
 
     df = generate_dataset(n_rows=args.rows, seed=args.seed)
     save_dataset(df, Path(args.output))
-    print(f"✓ Dataset saved to {args.output} ({len(df)} rows)")
+    print(f"[OK] Dataset saved to {args.output} ({len(df)} rows)")
+
 
 
 if __name__ == "__main__":

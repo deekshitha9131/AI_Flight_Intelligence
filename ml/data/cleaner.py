@@ -240,7 +240,7 @@ class DataCleaner:
             return round(float(row["price"]) * rate, 2)
 
         df["price_usd"] = df.apply(_to_usd, axis=1)
-        logger.info("Currency normalised → price_usd column added.")
+        logger.info("Currency normalised: price_usd column added.")
         return df
 
     def _validate_passengers(self, df: pd.DataFrame) -> pd.DataFrame:
@@ -260,4 +260,5 @@ def save_cleaned(df: pd.DataFrame, path=CLEANED_DATASET_CSV) -> None:
     """Save the cleaned DataFrame to CSV."""
     path.parent.mkdir(parents=True, exist_ok=True)
     df.to_csv(path, index=False)
-    logger.info("Cleaned dataset saved → %s (%d rows)", path, len(df))
+    logger.info("Cleaned dataset saved -> %s (%d rows)", path, len(df))
+

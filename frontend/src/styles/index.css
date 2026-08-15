@@ -1,4 +1,4 @@
-﻿:root {
+:root {
   color-scheme: light;
   --bg: #f3f6fb;
   --surface: rgba(255, 255, 255, 0.95);
@@ -416,6 +416,28 @@ main {
   color: var(--primary);
 }
 
+.empty-state {
+  display: grid;
+  gap: 0.7rem;
+  justify-items: start;
+  padding: 1.4rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow-soft);
+  animation: fadeInUp 0.3s ease;
+}
+
+.empty-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 3rem;
+  height: 3rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--primary) 12%, transparent);
+  color: var(--primary);
+}
+
 .auth-meta,
 .auth-footer {
   display: flex;
@@ -506,6 +528,17 @@ main {
   to { transform: rotate(360deg); }
 }
 
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .spin {
   animation: spin 0.9s linear infinite;
 }
@@ -559,10 +592,280 @@ footer {
     flex-direction: column;
     align-items: flex-start;
   }
+  .analytics-grid {
+    grid-template-columns: 1fr;
+  }
   .auth-header,
   .auth-meta,
   .auth-footer {
     flex-direction: column;
     align-items: flex-start;
   }
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
 }
+
+.assistant-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.8rem;
+}
+
+.assistant-message {
+  display: flex;
+}
+
+.assistant-message p {
+  margin: 0;
+}
+
+.assistant-message.user {
+  justify-content: flex-end;
+}
+
+.assistant-message.assistant p {
+  background: color-mix(in srgb, var(--surface-strong) 90%, transparent);
+}
+
+.chat-loading {
+  color: var(--muted);
+  font-style: italic;
+}
+
+.cta-row {
+  display: flex;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.dashboard-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.search-filter select {
+  width: 100%;
+  padding: 0.8rem 0.95rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-strong);
+  color: var(--text);
+}
+
+.primary-button.small {
+  padding: 0.6rem 0.9rem;
+}
+
+.analytics-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.metric-list {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.metric {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding: 0.8rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--surface-strong) 80%, transparent);
+}
+
+.metric strong {
+  font-size: 1.05rem;
+}
+
+.metric span {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.list-stack {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.list-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.8rem;
+  padding: 0.75rem 0.85rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--surface-strong) 80%, transparent);
+}
+
+.list-item strong {
+  white-space: nowrap;
+}
+
+.avatar-uploader {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.9rem;
+}
+
+.avatar-preview {
+  width: 3.2rem;
+  height: 3.2rem;
+  border-radius: 999px;
+  object-fit: cover;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--primary) 12%, transparent);
+  display: grid;
+  place-items: center;
+  font-weight: 800;
+  color: var(--primary);
+}
+
+.avatar-placeholder {
+  font-size: 1.15rem;
+}
+
+.avatar-button input {
+  display: none;
+}
+
+.toggle-stack {
+  display: grid;
+  gap: 0.6rem;
+  margin-bottom: 0.85rem;
+}
+
+.checkbox-row.full-width {
+  width: fit-content;
+  padding: 0.65rem 0.8rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--surface-strong) 80%, transparent);
+}
+
+.field select {
+  width: 100%;
+  padding: 0.8rem 0.95rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-strong);
+  color: var(--text);
+}
+
+.airport-autocomplete-field {
+  position: relative;
+}
+
+.input-wrapper {
+  position: relative;
+}
+
+.airport-dropdown {
+  position: absolute;
+  top: calc(100% + 0.35rem);
+  left: 0;
+  right: 0;
+  max-height: 240px;
+  overflow-y: auto;
+  z-index: 100;
+  background: var(--surface-strong);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow);
+  display: flex;
+  flex-direction: column;
+  padding: 0.35rem;
+  gap: 0.2rem;
+  backdrop-filter: blur(16px);
+}
+
+.dropdown-item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.15rem;
+  padding: 0.55rem 0.75rem;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  border-radius: var(--radius-sm);
+  text-align: left;
+  transition: background 0.15s ease;
+  width: 100%;
+}
+
+.dropdown-item:hover,
+.dropdown-item:focus {
+  background: color-mix(in srgb, var(--primary) 12%, transparent);
+  outline: none;
+}
+
+.dropdown-item-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.airport-badge {
+  display: inline-block;
+  padding: 0.15rem 0.45rem;
+  border-radius: 0.4rem;
+  background: color-mix(in srgb, var(--primary) 20%, transparent);
+  color: var(--primary);
+  font-weight: 800;
+  font-size: 0.8rem;
+  letter-spacing: 0.04em;
+}
+
+.airport-city {
+  font-weight: 700;
+  font-size: 0.92rem;
+}
+
+.dropdown-item-sub {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.dropdown-no-results {
+  padding: 0.75rem;
+  color: var(--muted);
+  font-size: 0.88rem;
+  text-align: center;
+}
+
+.suggestion-row {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  margin-top: 0.35rem;
+}
+
+.suggestion-chip {
+  padding: 0.25rem 0.55rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--surface) 90%, transparent);
+  border: 1px solid var(--border);
+  color: var(--muted);
+  transition: all 0.15s ease;
+}
+
+.suggestion-chip:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 10%, transparent);
+}
+
