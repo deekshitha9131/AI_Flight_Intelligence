@@ -6,6 +6,7 @@ from app.database.session import get_db
 from app.dependencies.auth import get_current_user
 from app.models.user import User
 from app.schemas.auth import (
+    ChangePasswordRequest,
     LoginRequest,
     LoginResponse,
     RefreshRequest,
@@ -51,7 +52,9 @@ def _serialize_user_payload(current_user: User) -> dict[str, object]:
     response_model=UserRegistrationResponse,
     status_code=status.HTTP_201_CREATED,
     summary="Register a new user",
-    description="Create a new user account with email, password, and profile information.",
+    description=(
+        "Create a new user account with email, password, and profile information."
+    ),
 )
 async def register_user(
     payload: UserCreate,
@@ -109,7 +112,10 @@ async def login_user(
     response_model=RefreshResponse,
     status_code=status.HTTP_200_OK,
     summary="Refresh access token",
-    description="Exchange a valid refresh token for a new access token and rotated refresh token.",
+    description=(
+        "Exchange a valid refresh token for a new access token and "
+        "rotated refresh token."
+    ),
 )
 async def refresh_token(
     payload: RefreshRequest,
@@ -133,7 +139,9 @@ async def refresh_token(
     "/me",
     status_code=status.HTTP_200_OK,
     summary="Update the current user profile",
-    description="Update profile details and travel preferences for the authenticated user.",
+    description=(
+        "Update profile details and travel preferences for the authenticated user."
+    ),
 )
 async def update_current_user_profile(
     payload: UserUpdate,
@@ -142,7 +150,9 @@ async def update_current_user_profile(
 ) -> dict[str, object]:
     """Update the authenticated user's basic profile and preference fields."""
     service = UserService(session=db)
-    updated_user = service.update_user_profile(user_id=current_user.id, payload=payload)
+    updated_user = service.update_user_profile(
+        user_id=current_user.id, payload=payload
+    )
     return {
         "success": True,
         "message": "Profile updated successfully",
@@ -150,11 +160,37 @@ async def update_current_user_profile(
     }
 
 
+@router.post(
+    "/change-password",
+    status_code=status.HTTP_200_OK,
+    summary="Change user password",
+    description="Validate current password and update user to a new hashed password.",
+)
+async def change_password(
+    payload: ChangePasswordRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> dict[str, object]:
+    """Verify current password, hash new password, and save to database."""
+    service = UserService(session=db)
+    service.change_password(
+        user_id=current_user.id,
+        current_password=payload.current_password,
+        new_password=payload.new_password,
+    )
+    return {
+        "success": True,
+        "message": "Password updated successfully",
+    }
+
+
 @router.get(
     "/me",
     status_code=status.HTTP_200_OK,
     summary="Get the current user",
-    description="Return the authenticated user profile for the active JWT bearer token.",
+    description=(
+        "Return the authenticated user profile for the active JWT bearer token."
+    ),
 )
 async def get_current_user_profile(
     current_user: User = Depends(get_current_user),

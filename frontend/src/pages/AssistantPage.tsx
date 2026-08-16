@@ -2,6 +2,7 @@ import { FormEvent, useState } from "react";
 import { Loader2, SendHorizonal, Trash2 } from "lucide-react";
 import { sendAssistantMessage } from "../api/assistant";
 import { AuthMessage } from "../components/AuthMessage";
+import { MarkdownMessage } from "../components/MarkdownMessage";
 import { getAssistantErrorMessage } from "../hooks/assistantUtils";
 
 type ToastType = "success" | "error" | "warning" | "info";
@@ -93,7 +94,11 @@ export function AssistantPage({ onNotify }: { onNotify: (message: string, type?:
         {errorMessage ? <AuthMessage variant="error">{errorMessage}</AuthMessage> : null}
         {messages.map((message, index) => (
           <div className={`assistant-message ${message.role}`} key={index}>
-            <p>{message.content}</p>
+            {message.role === "assistant" ? (
+              <MarkdownMessage content={message.content} />
+            ) : (
+              <p>{message.content}</p>
+            )}
           </div>
         ))}
         {loading ? <p className="chat-loading">Thinking…</p> : null}

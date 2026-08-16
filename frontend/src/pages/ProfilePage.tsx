@@ -1,6 +1,6 @@
-import { ShieldCheck, Star, UserCircle2, Info } from "lucide-react";
+import { Info, ShieldCheck, Star, UserCircle2 } from "lucide-react";
 import { useEffect, useState, type ChangeEvent } from "react";
-import { getCurrentUser, updateCurrentUser } from "../api/auth";
+import { changePassword, getCurrentUser, updateCurrentUser } from "../api/auth";
 import { PasswordField } from "../components/PasswordField";
 import { DEFAULT_CURRENCY, DEFAULT_TRAVEL_CLASS } from "../constants";
 import { useAuthStore } from "../store/auth";
@@ -16,6 +16,7 @@ export function ProfilePage({ theme, onThemeChange, onNotify }: ProfilePageProps
   const { user, setUser, logout } = useAuthStore();
   const [form, setForm] = useState({ first_name: user?.first_name ?? "", last_name: user?.last_name ?? "", email: user?.email ?? "" });
   const [passwords, setPasswords] = useState({ current_password: "", new_password: "", confirm_password: "" });
+  const [changingPassword, setChangingPassword] = useState(false);
   const [preferences, setPreferences] = useState({ currency: user?.currency_preference ?? DEFAULT_CURRENCY, cabin: user?.preferred_cabin ?? DEFAULT_TRAVEL_CLASS, airport: user?.preferred_airport ?? "HYD" });
   const [avatarPreview, setAvatarPreview] = useState(user?.avatar_url ?? "");
   const [loading, setLoading] = useState(false);
@@ -103,12 +104,35 @@ export function ProfilePage({ theme, onThemeChange, onNotify }: ProfilePageProps
     }
   };
 
-  const handlePassword = () => {
+  const handlePassword = async () => {
+    if (!passwords.current_password) {
+      onNotify("Please enter your current password.", "warning");
+      return;
+    }
+    if (passwords.new_password.length < 8) {
+      onNotify("New password must be at least 8 characters long.", "warning");
+      return;
+    }
     if (passwords.new_password !== passwords.confirm_password) {
       onNotify("New passwords must match.", "warning");
       return;
     }
-    onNotify("Password changes are handled by the backend auth flow when that endpoint is available.", "info");
+    setChangingPassword(true);
+    setErrorMessage(undefined);
+    try {
+      await changePassword({
+        current_password: passwords.current_password,
+        new_password: passwords.new_password,
+      });
+      setPasswords({ current_password: "", new_password: "", confirm_password: "" });
+      onNotify("Password updated successfully.", "success");
+    } catch (error) {
+      const responseData = (error as { response?: { data?: { detail?: string; message?: string } } }).response?.data;
+      const message = responseData?.detail || responseData?.message || (error as Error).message || "Unable to update password.";
+      onNotify(message, "error");
+    } finally {
+      setChangingPassword(false);
+    }
   };
 
   return (
@@ -146,7 +170,7 @@ export function ProfilePage({ theme, onThemeChange, onNotify }: ProfilePageProps
             <PasswordField label="New password" name="new_password" value={passwords.new_password} onChange={(value) => setPasswords((current) => ({ ...current, new_password: value }))} autoComplete="new-password" placeholder="New password" />
             <PasswordField label="Confirm password" name="confirm_password" value={passwords.confirm_password} onChange={(value) => setPasswords((current) => ({ ...current, confirm_password: value }))} autoComplete="new-password" placeholder="Confirm password" />
           </div>
-          <button className="primary-button" type="button" onClick={handlePassword}>Update password</button>
+          <button className="primary-button" type="button" onClick={handlePassword} disabled={changingPassword}>{changingPassword ? "Updating..." : "Update password"}</button>
         </article>
         <article className="card-panel">
           <div className="eyebrow"><Star size={14} /> Travel preferences</div>

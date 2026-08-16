@@ -71,7 +71,17 @@ export async function getCurrentUser() {
   return response.data;
 }
 
+export interface ChangePasswordPayload {
+  current_password: string;
+  new_password: string;
+}
+
 export async function updateCurrentUser(payload: UpdateProfilePayload) {
   const response = await client.put<Envelope<User>>("/auth/me", payload);
+  return response.data;
+}
+
+export async function changePassword(payload: ChangePasswordPayload) {
+  const response = await client.post<Envelope<null>>("/auth/change-password", payload);
   return response.data;
 }

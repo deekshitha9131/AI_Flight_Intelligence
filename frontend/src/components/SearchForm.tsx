@@ -7,11 +7,12 @@ import type { AirportOption, ToastType } from "../types";
 export type SearchFormProps = {
   compact?: boolean;
   onNotify?: (message: string, type?: ToastType) => void;
+  onFormChange?: () => void;
   today: string;
   airportOptions: AirportOption[];
 };
 
-export function SearchForm({ compact = false, onNotify, today, airportOptions }: SearchFormProps) {
+export function SearchForm({ compact = false, onNotify, onFormChange, today, airportOptions }: SearchFormProps) {
   const navigate = useNavigate();
   const [origin, setOrigin] = useState("HYD");
   const [destination, setDestination] = useState("DXB");
@@ -21,6 +22,15 @@ export function SearchForm({ compact = false, onNotify, today, airportOptions }:
   const [children, setChildren] = useState(String(DEFAULT_PASSENGERS.children));
   const [infants, setInfants] = useState(String(DEFAULT_PASSENGERS.infants));
   const [nonStop, setNonStop] = useState(false);
+
+  const handleOriginChange = (val: string) => { setOrigin(val); onFormChange?.(); };
+  const handleDestinationChange = (val: string) => { setDestination(val); onFormChange?.(); };
+  const handleDepartureChange = (val: string) => { setDeparture(val); onFormChange?.(); };
+  const handleClassChange = (val: string) => { setTravelClass(val); onFormChange?.(); };
+  const handleAdultsChange = (val: string) => { setAdults(val); onFormChange?.(); };
+  const handleChildrenChange = (val: string) => { setChildren(val); onFormChange?.(); };
+  const handleInfantsChange = (val: string) => { setInfants(val); onFormChange?.(); };
+  const handleNonStopChange = (val: boolean) => { setNonStop(val); onFormChange?.(); };
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
@@ -55,15 +65,15 @@ export function SearchForm({ compact = false, onNotify, today, airportOptions }:
 
   return (
     <form className={compact ? "search compact" : "search"} onSubmit={submit}>
-      <AirportInput label="From" value={origin} onChange={setOrigin} placeholder="e.g. HYD" airportOptions={airportOptions} />
-      <AirportInput label="To" value={destination} onChange={setDestination} placeholder="e.g. DXB" airportOptions={airportOptions} />
+      <AirportInput label="From" value={origin} onChange={handleOriginChange} placeholder="e.g. HYD" airportOptions={airportOptions} />
+      <AirportInput label="To" value={destination} onChange={handleDestinationChange} placeholder="e.g. DXB" airportOptions={airportOptions} />
       <label className="field">
         <span className="field-label">Departure</span>
-        <input aria-label="Departure date" type="date" min={today} value={departure} onChange={(event) => setDeparture(event.target.value)} />
+        <input aria-label="Departure date" type="date" min={today} value={departure} onChange={(event) => handleDepartureChange(event.target.value)} />
       </label>
       <label className="field">
         <span className="field-label">Travel class</span>
-        <select value={travelClass} onChange={(event) => setTravelClass(event.target.value)}>
+        <select value={travelClass} onChange={(event) => handleClassChange(event.target.value)}>
           {TRAVEL_CLASSES.map((option) => (
             <option key={option.value} value={option.value}>{option.label}</option>
           ))}
@@ -71,18 +81,18 @@ export function SearchForm({ compact = false, onNotify, today, airportOptions }:
       </label>
       <label className="field">
         <span className="field-label">Adults</span>
-        <input aria-label="Adults" type="number" min="1" max="9" value={adults} onChange={(event) => setAdults(event.target.value)} />
+        <input aria-label="Adults" type="number" min="1" max="9" value={adults} onChange={(event) => handleAdultsChange(event.target.value)} />
       </label>
       <label className="field">
         <span className="field-label">Children</span>
-        <input aria-label="Children" type="number" min="0" max="9" value={children} onChange={(event) => setChildren(event.target.value)} />
+        <input aria-label="Children" type="number" min="0" max="9" value={children} onChange={(event) => handleChildrenChange(event.target.value)} />
       </label>
       <label className="field">
         <span className="field-label">Infants</span>
-        <input aria-label="Infants" type="number" min="0" max="9" value={infants} onChange={(event) => setInfants(event.target.value)} />
+        <input aria-label="Infants" type="number" min="0" max="9" value={infants} onChange={(event) => handleInfantsChange(event.target.value)} />
       </label>
       <label className="checkbox-row compact">
-        <input type="checkbox" checked={nonStop} onChange={(event) => setNonStop(event.target.checked)} />
+        <input type="checkbox" checked={nonStop} onChange={(event) => handleNonStopChange(event.target.checked)} />
         <span>Non-stop only</span>
       </label>
       <button className="primary-button" type="submit">Search flights</button>

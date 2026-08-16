@@ -23,8 +23,7 @@ no real ML model or LLM API key is required.
 from __future__ import annotations
 
 from datetime import date, timedelta
-from typing import Any
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import MagicMock
 from uuid import uuid4
 
 import pytest
@@ -560,5 +559,382 @@ class TestAssistant:
                 headers=headers_b,
             )
             assert response.status_code == 404
+        finally:
+            _clear_ai_overrides()
+
+    @pytest.mark.asyncio
+    async def test_assistant_greeting_does_not_trigger_flight_search(
+        self, client, auth_headers
+    ):
+        _override_llm_provider()
+        try:
+            r = await client.post(
+                "/api/v1/assistant/chat",
+                json={"message": "hi"},
+                headers=auth_headers,
+            )
+            assert r.status_code == 200
+            reply = r.json()["data"]["reply"]
+            assert len(reply) > 0
+            assert "available flights" not in reply.lower()
+        finally:
+            _clear_ai_overrides()
+
+    @pytest.mark.asyncio
+    async def test_assistant_multiturn_hyd_to_del_today_7pm(
+        self, client, auth_headers
+    ):
+        _override_llm_provider()
+        try:
+            # Turn 1
+            r1 = await client.post(
+                "/api/v1/assistant/chat",
+                json={"message": "I have to go Delhi from Hyderabad"},
+                headers=auth_headers,
+            )
+            assert r1.status_code == 200
+            conv_id = r1.json()["data"]["conversation_id"]
+            reply1 = r1.json()["data"]["reply"]
+            assert "HYD" in reply1 and "DEL" in reply1
+
+            # Turn 2
+            r2 = await client.post(
+                "/api/v1/assistant/chat",
+                json={"message": "today by 7pm", "conversation_id": conv_id},
+                headers=auth_headers,
+            )
+            assert r2.status_code == 200
+            reply2 = r2.json()["data"]["reply"]
+            assert "available flights" in reply2.lower() or "flight" in reply2.lower()
+            assert "HYD" in reply2 and "DEL" in reply2
+        finally:
+            _clear_ai_overrides()
+
+    @pytest.mark.asyncio
+    async def test_assistant_multiturn_context_preservation_hyd_to_bom(
+        self, client, auth_headers
+    ):
+        _override_llm_provider()
+        try:
+            # Turn 1
+            r1 = await client.post(
+                "/api/v1/assistant/chat",
+                json={"message": "I want to travel from Hyderabad to Mumbai"},
+                headers=auth_headers,
+            )
+            assert r1.status_code == 200
+            conv_id = r1.json()["data"]["conversation_id"]
+
+            # Turn 2 with typo
+            r2 = await client.post(
+                "/api/v1/assistant/chat",
+                json={"message": "tomorrow morning", "conversation_id": conv_id},
+                headers=auth_headers,
+            )
+            assert r2.status_code == 200
+            reply = r2.json()["data"]["reply"]
+            assert len(reply) > 0
+            assert "available flights" in reply.lower() or "flight" in reply.lower()
+        finally:
+            _clear_ai_overrides()
+
+    @pytest.mark.asyncio
+    async def test_assistant_multiturn_context_preservation_del_to_dxb(
+        self, client, auth_headers
+    ):
+        _override_llm_provider()
+        try:
+            # Turn 1
+            r1 = await client.post(
+                "/api/v1/assistant/chat",
+                json={"message": "Delhi to Dubai"},
+                headers=auth_headers,
+            )
+            assert r1.status_code == 200
+            conv_id = r1.json()["data"]["conversation_id"]
+
+            # Turn 2
+            r2 = await client.post(
+                "/api/v1/assistant/chat",
+                json={"message": "next Monday", "conversation_id": conv_id},
+                headers=auth_headers,
+            )
+            assert r2.status_code == 200
+            reply = r2.json()["data"]["reply"]
+            assert len(reply) > 0
+            assert "available flights" in reply.lower() or "flight" in reply.lower()
+        finally:
+            _clear_ai_overrides()
+
+    @pytest.mark.asyncio
+    async def test_assistant_one_turn_request_executes_search(
+        self, client, auth_headers
+    ):
+        _override_llm_provider()
+        try:
+            msg = "I need a flight from Hyderabad to Mumbai tomorrow morning"
+            r = await client.post(
+                "/api/v1/assistant/chat",
+                json={"message": msg},
+                headers=auth_headers,
+            )
+            assert r.status_code == 200
+            reply = r.json()["data"]["reply"]
+            assert "HYD" in reply or "Hyderabad" in reply
+            assert "BOM" in reply or "Mumbai" in reply
+            assert "google flights" not in reply.lower()
+            assert "live booking feed" not in reply.lower()
+        finally:
+            _clear_ai_overrides()
+
+    @pytest.mark.asyncio
+    async def test_assistant_missing_date_asks_clarification(
+        self, client, auth_headers
+    ):
+        _override_llm_provider()
+        try:
+            r = await client.post(
+                "/api/v1/assistant/chat",
+                json={"message": "I want to go from Delhi to Hyderabad"},
+                headers=auth_headers,
+            )
+            assert r.status_code == 200
+            reply = r.json()["data"]["reply"]
+            assert "DEL" in reply and "HYD" in reply
+            assert "date" in reply.lower() or "time" in reply.lower()
+            assert "google flights" not in reply.lower()
+        finally:
+            _clear_ai_overrides()
+
+    @pytest.mark.asyncio
+    async def test_assistant_no_results_handled_honestly(
+        self, client, auth_headers
+    ):
+        _override_llm_provider()
+        from unittest.mock import AsyncMock, patch
+        try:
+            target_path = "app.services.flight_service.FlightService.search_flights"
+            with patch(target_path, new_callable=AsyncMock) as mock_search:
+                mock_search.return_value = ([], 0)
+                r = await client.post(
+                    "/api/v1/assistant/chat",
+                    json={"message": "Hyderabad to Mumbai tomorrow morning"},
+                    headers=auth_headers,
+                )
+                assert r.status_code == 200
+                reply = r.json()["data"]["reply"]
+                assert (
+                    "no matching flights" in reply.lower()
+                    or "no flights" in reply.lower()
+                )
+                assert "google flights" not in reply.lower()
+        finally:
+            _clear_ai_overrides()
+
+    @pytest.mark.asyncio
+    async def test_assistant_search_failure_handled_honestly(
+        self, client, auth_headers
+    ):
+        _override_llm_provider()
+        from unittest.mock import AsyncMock, patch
+        try:
+            target_path = "app.services.flight_service.FlightService.search_flights"
+            with patch(target_path, new_callable=AsyncMock) as mock_search:
+                mock_search.side_effect = Exception("Database timeout")
+                r = await client.post(
+                    "/api/v1/assistant/chat",
+                    json={"message": "Hyderabad to Mumbai tomorrow morning"},
+                    headers=auth_headers,
+                )
+                assert r.status_code == 200
+                reply = r.json()["data"]["reply"]
+                assert (
+                    "couldn't complete" in reply.lower()
+                    or "failed" in reply.lower()
+                    or "no flights" in reply.lower()
+                )
+                assert "google flights" not in reply.lower()
+        finally:
+            _clear_ai_overrides()
+
+    @pytest.mark.asyncio
+    async def test_assistant_general_conversation_does_not_trigger_search(
+        self, client, auth_headers
+    ):
+        _override_llm_provider()
+        from unittest.mock import AsyncMock, patch
+        try:
+            target_path = "app.services.flight_service.FlightService.search_flights"
+            with patch(target_path, new_callable=AsyncMock) as mock_search:
+                r = await client.post(
+                    "/api/v1/assistant/chat",
+                    json={"message": "tell me about Hyderabad"},
+                    headers=auth_headers,
+                )
+                assert r.status_code == 200
+                mock_search.assert_not_called()
+        finally:
+            _clear_ai_overrides()
+
+    @pytest.mark.asyncio
+    async def test_gemini_succeeds_returns_flight_results(
+        self, client, auth_headers
+    ):
+        from app.ai.llm_provider import GeminiProvider
+        from app.dependencies.ai import get_llm_provider
+        from app.main import app as fastapi_app
+        from unittest.mock import AsyncMock
+
+        mock_gemini = AsyncMock(spec=GeminiProvider)
+        mock_gemini.complete.return_value = (
+            "Here are flights for HYD to BOM: Flight 6E201 (IndiGo) at 06:00.",
+            50,
+        )
+        fastapi_app.dependency_overrides[get_llm_provider] = lambda: mock_gemini
+        try:
+            r = await client.post(
+                "/api/v1/assistant/chat",
+                json={"message": "Hyderabad to Mumbai tomorrow morning"},
+                headers=auth_headers,
+            )
+            assert r.status_code == 200
+            reply = r.json()["data"]["reply"]
+            assert "6E201" in reply or "IndiGo" in reply
+        finally:
+            _clear_ai_overrides()
+
+    @pytest.mark.asyncio
+    async def test_gemini_timeout_falls_back_in_time_bound(
+        self, client, auth_headers
+    ):
+        import asyncio
+        import time
+        from app.ai.llm_provider import GeminiProvider
+        from app.dependencies.ai import get_llm_provider
+        from app.main import app as fastapi_app
+        from unittest.mock import patch
+
+        async def slow_complete(*args, **kwargs):
+            await asyncio.sleep(5.0)
+            return "Slow response", 10
+
+        mock_gemini = GeminiProvider(api_key="fake_key")
+        fastapi_app.dependency_overrides[get_llm_provider] = lambda: mock_gemini
+
+        t0 = time.monotonic()
+        try:
+            with patch.object(mock_gemini, "complete", side_effect=slow_complete):
+                r = await client.post(
+                    "/api/v1/assistant/chat",
+                    json={"message": "Hyderabad to Mumbai tomorrow morning"},
+                    headers=auth_headers,
+                )
+            elapsed = time.monotonic() - t0
+            assert r.status_code == 200
+            assert elapsed < 4.5
+            reply = r.json()["data"]["reply"]
+            assert "HYD" in reply or "Hyderabad" in reply
+            assert "BOM" in reply or "Mumbai" in reply
+        finally:
+            _clear_ai_overrides()
+
+    @pytest.mark.asyncio
+    async def test_gemini_network_failure_falls_back_gracefully(
+        self, client, auth_headers
+    ):
+        from app.ai.llm_provider import GeminiProvider
+        from app.dependencies.ai import get_llm_provider
+        from app.main import app as fastapi_app
+        from unittest.mock import patch
+
+        mock_gemini = GeminiProvider(api_key="fake_key")
+        fastapi_app.dependency_overrides[get_llm_provider] = lambda: mock_gemini
+
+        try:
+            with patch.object(
+                mock_gemini,
+                "complete",
+                side_effect=Exception("Connection refused by Google API"),
+            ):
+                r = await client.post(
+                    "/api/v1/assistant/chat",
+                    json={"message": "Hyderabad to Mumbai tomorrow morning"},
+                    headers=auth_headers,
+                )
+            assert r.status_code == 200
+            reply = r.json()["data"]["reply"]
+            assert "HYD" in reply or "Hyderabad" in reply
+            assert "BOM" in reply or "Mumbai" in reply
+        finally:
+            _clear_ai_overrides()
+
+    @pytest.mark.asyncio
+    async def test_gemini_unavailable_normal_chat_falls_back(
+        self, client, auth_headers
+    ):
+        from app.ai.llm_provider import GeminiProvider
+        from app.dependencies.ai import get_llm_provider
+        from app.main import app as fastapi_app
+        from unittest.mock import patch
+
+        mock_gemini = GeminiProvider(api_key="fake_key")
+        fastapi_app.dependency_overrides[get_llm_provider] = lambda: mock_gemini
+
+        try:
+            with patch.object(
+                mock_gemini,
+                "complete",
+                side_effect=Exception("API Unreachable"),
+            ):
+                r = await client.post(
+                    "/api/v1/assistant/chat",
+                    json={"message": "hi"},
+                    headers=auth_headers,
+                )
+            assert r.status_code == 200
+            reply = r.json()["data"]["reply"]
+            assert len(reply) > 0
+            assert "assistant" in reply.lower() or "hello" in reply.lower()
+        finally:
+            _clear_ai_overrides()
+
+    @pytest.mark.asyncio
+    async def test_gemini_timeout_multiturn_preserves_context_and_flights(
+        self, client, auth_headers
+    ):
+        import asyncio
+        from app.ai.llm_provider import GeminiProvider
+        from app.dependencies.ai import get_llm_provider
+        from app.main import app as fastapi_app
+        from unittest.mock import patch
+
+        async def slow_complete(*args, **kwargs):
+            await asyncio.sleep(5.0)
+
+        mock_gemini = GeminiProvider(api_key="fake_key")
+        fastapi_app.dependency_overrides[get_llm_provider] = lambda: mock_gemini
+
+        try:
+            r1 = await client.post(
+                "/api/v1/assistant/chat",
+                json={"message": "I want to travel from Hyderabad to Mumbai"},
+                headers=auth_headers,
+            )
+            assert r1.status_code == 200
+            conv_id = r1.json()["data"]["conversation_id"]
+
+            with patch.object(mock_gemini, "complete", side_effect=slow_complete):
+                r2 = await client.post(
+                    "/api/v1/assistant/chat",
+                    json={
+                        "message": "tomorrow morning",
+                        "conversation_id": conv_id,
+                    },
+                    headers=auth_headers,
+                )
+            assert r2.status_code == 200
+            reply = r2.json()["data"]["reply"]
+            assert "HYD" in reply or "Hyderabad" in reply
+            assert "BOM" in reply or "Mumbai" in reply
         finally:
             _clear_ai_overrides()

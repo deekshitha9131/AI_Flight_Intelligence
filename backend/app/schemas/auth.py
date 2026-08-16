@@ -47,3 +47,13 @@ class RefreshResponse(BaseModel):
     success: bool
     message: str
     data: RefreshResponseData
+
+
+class ChangePasswordRequest(BaseModel):
+    """Request payload for changing user password."""
+
+    current_password: str = Field(..., min_length=1, description="Current user password")
+    new_password: str = Field(
+        ..., min_length=8, max_length=128, description="New password meeting complexity requirements"
+    )
+

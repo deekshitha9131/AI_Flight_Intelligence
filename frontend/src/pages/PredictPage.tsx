@@ -5,8 +5,14 @@ import type { ToastType } from "../types";
 
 export function PredictPage({ today, onNotify }: { today: string; onNotify: (message: string, type?: ToastType) => void }) {
   const { mutation, submitPrediction } = usePrediction(onNotify);
-  const confidenceLabel = useMemo(() => getConfidenceLabel(mutation.data?.data.confidence_score), [mutation.data?.data.confidence_score]);
+  const confidenceLabel = useMemo(
+    () => getConfidenceLabel(mutation.data?.data.confidence_score),
+    [mutation.data?.data.confidence_score]
+  );
   const errorMessage = getPredictionErrorMessage(mutation.error);
+
+  const predData = mutation.data?.data;
+  const isBuySoon = predData ? predData.predicted_price < predData.price_range_high : true;
 
   return (
     <section className="page-section">
@@ -41,21 +47,57 @@ export function PredictPage({ today, onNotify }: { today: string; onNotify: (mes
           Forecast fare
         </button>
       </form>
-      {mutation.isPending ? <div className="skeleton-list"><div className="skeleton-card" /></div> : null}
-      {mutation.isError ? <div className="message error">{errorMessage ?? "We could not generate a price estimate right now. Please try again."}</div> : null}
-      {mutation.data ? (
+
+      {mutation.isPending ? (
+        <div className="skeleton-list">
+          <div className="skeleton-card" />
+        </div>
+      ) : null}
+
+      {mutation.isError ? (
+        <div className="message error">
+          {errorMessage ?? "We could not generate a price estimate right now. Please try again."}
+        </div>
+      ) : null}
+
+      {predData ? (
         <article className="forecast card-panel">
-          <p className="eyebrow">Likely fare</p>
-          <h2>
-            {mutation.data.data.currency} {mutation.data.data.predicted_price.toFixed(2)}
-          </h2>
-          <p>{confidenceLabel} · {Math.round((mutation.data.data.confidence_score ?? 0) * 100)}% confidence</p>
-          <p>Range: {mutation.data.data.price_range_low}–{mutation.data.data.price_range_high}</p>
-          <p>{mutation.data.data.suggested_booking_window ?? "Book once the fare is within your comfort range."}</p>
-          <div className="meta-row compact">
-            <span className="pill">{mutation.data.data.predicted_price < mutation.data.data.price_range_high ? "Buy soon" : "Wait"}</span>
-            <span className="pill">Historical trend: stable</span>
-            <span className="pill">Best booking window: {mutation.data.data.suggested_booking_window ?? "soon"}</span>
+          <div className="forecast-header">
+            <span className="eyebrow">Likely fare</span>
+            <div className="price-primary">
+              {predData.currency} {predData.predicted_price.toFixed(2)}
+            </div>
+            <div className="forecast-sub">
+              {confidenceLabel} · {Math.round((predData.confidence_score ?? 0) * 100)}% confidence
+            </div>
+          </div>
+
+          <div className="forecast-grid">
+            <div className="forecast-item">
+              <span className="forecast-label">Recommendation</span>
+              <strong className={`forecast-value ${isBuySoon ? "accent" : ""}`}>
+                {isBuySoon ? "Buy soon" : "Wait"}
+              </strong>
+            </div>
+
+            <div className="forecast-item">
+              <span className="forecast-label">Historical Trend</span>
+              <strong className="forecast-value">Stable</strong>
+            </div>
+
+            <div className="forecast-item">
+              <span className="forecast-label">Price Range</span>
+              <strong className="forecast-value">
+                {predData.currency} {predData.price_range_low.toFixed(2)} – {predData.currency} {predData.price_range_high.toFixed(2)}
+              </strong>
+            </div>
+
+            <div className="forecast-item">
+              <span className="forecast-label">Best Booking Window</span>
+              <strong className="forecast-value">
+                {predData.suggested_booking_window ?? "Book 14–21 days in advance"}
+              </strong>
+            </div>
           </div>
         </article>
       ) : null}

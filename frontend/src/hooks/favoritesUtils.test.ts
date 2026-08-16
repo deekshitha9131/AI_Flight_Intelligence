@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import type { FavoriteItem, FavoriteListResponse } from "../api/flights";
-import { mergeFavoriteItem, removeFavoriteItem } from "./favoritesUtils";
+import {
+  formatFavoriteDateTime,
+  mergeFavoriteItem,
+  removeFavoriteItem,
+} from "./favoritesUtils";
 
 const baseFavorite: FavoriteItem = {
   id: "fav-1",
@@ -8,8 +12,8 @@ const baseFavorite: FavoriteItem = {
   airline: "EK",
   origin: "HYD",
   destination: "DXB",
-  departure: "2025-12-01T10:30:00",
-  arrival: "2025-12-01T12:45:00",
+  departure: "2025-12-01T10:30:00Z",
+  arrival: "2025-12-01T12:45:00Z",
   price: 299.99,
   currency: "USD",
 };
@@ -42,5 +46,17 @@ describe("favorites state helpers", () => {
 
     expect(next?.data).toHaveLength(0);
     expect(next?.count).toBe(0);
+  });
+
+  it("formats ISO timestamps into human-readable date/time strings", () => {
+    const formatted = formatFavoriteDateTime("2025-12-01T10:30:00Z");
+    expect(formatted).toContain("Dec");
+    expect(formatted).toContain("2025");
+  });
+
+  it("handles missing or invalid date values gracefully", () => {
+    expect(formatFavoriteDateTime(null)).toBe("Date unavailable");
+    expect(formatFavoriteDateTime(undefined)).toBe("Date unavailable");
+    expect(formatFavoriteDateTime("invalid-date")).toBe("Date unavailable");
   });
 });

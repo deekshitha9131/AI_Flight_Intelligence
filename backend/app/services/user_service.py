@@ -4,8 +4,12 @@ import json
 from datetime import datetime, timezone
 from uuid import UUID
 
-from app.auth.password import hash_password
-from app.exceptions.base import NotFoundException, ValidationException
+from app.auth.password import hash_password, verify_password
+from app.exceptions.base import (
+    NotFoundException,
+    UnauthorizedException,
+    ValidationException,
+)
 from app.models.user import User, UserRole
 from app.repositories.user_repository import UserRepository
 from app.schemas.user import UserCreate, UserUpdate
@@ -72,15 +76,41 @@ class UserService:
             updates["preferred_airport"] = str(changes["preferred_airport"]).upper()
         if "preferred_cabin" in changes and changes["preferred_cabin"] is not None:
             updates["preferred_cabin"] = str(changes["preferred_cabin"]).upper()
-        if "currency_preference" in changes and changes["currency_preference"] is not None:
-            updates["currency_preference"] = str(changes["currency_preference"]).upper()
+        if (
+            "currency_preference" in changes
+            and changes["currency_preference"] is not None
+        ):
+            updates["currency_preference"] = str(
+                changes["currency_preference"]
+            ).upper()
         if "notification_settings" in changes:
-            updates["notification_settings"] = json.dumps(changes["notification_settings"])
+            updates["notification_settings"] = json.dumps(
+                changes["notification_settings"]
+            )
         if "is_active" in changes:
             updates["is_active"] = changes["is_active"]
         if "is_verified" in changes:
             updates["is_verified"] = changes["is_verified"]
         if "role" in changes and changes["role"] is not None:
-            updates["role"] = changes["role"].value if hasattr(changes["role"], "value") else changes["role"]
+            role_val = (
+                changes["role"].value
+                if hasattr(changes["role"], "value")
+                else changes["role"]
+            )
+            updates["role"] = role_val
 
         return self.repository.update_user(user=user, updates=updates)
+
+    def change_password(
+        self, *, user_id: UUID, current_password: str, new_password: str
+    ) -> User:
+        """Validate current password and update persistent record."""
+        user = self.get_user_profile(user_id=user_id)
+        if not verify_password(current_password, user.password_hash):
+            raise UnauthorizedException(message="Current password is incorrect.")
+
+        UserCreate.validate_password(new_password)
+        new_hash = hash_password(new_password)
+        return self.repository.update_user(
+            user=user, updates={"password_hash": new_hash}
+        )

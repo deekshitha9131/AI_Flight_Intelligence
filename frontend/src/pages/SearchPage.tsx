@@ -1,4 +1,6 @@
+import { useEffect, useState } from "react";
 import { Compass, Info } from "lucide-react";
+import { useLocation } from "react-router-dom";
 import { AuthMessage } from "../components/AuthMessage";
 import { FlightResultCard } from "../components/FlightResultCard";
 import { SearchForm } from "../components/SearchForm";
@@ -22,10 +24,19 @@ export type SearchPageProps = {
 };
 
 export function SearchPage({ airportOptions, today, onNotify }: SearchPageProps) {
+  const location = useLocation();
   const { query, enabled } = useSearch();
   const { saveFavorite, isFavorite } = useFavorites(onNotify);
 
-  const flights: Flight[] = Array.isArray(query.data?.data) ? query.data.data : [];
+  const [isFormDirty, setIsFormDirty] = useState(false);
+
+  useEffect(() => {
+    setIsFormDirty(false);
+  }, [location.search]);
+
+  const rawFlights: Flight[] = (!query.isLoading && !query.isFetching && Array.isArray(query.data?.data)) ? query.data.data : [];
+  const flights: Flight[] = isFormDirty ? [] : rawFlights;
+
   const resultCount = typeof query.data?.count === "number" ? query.data.count : flights.length;
   const errorMessage = getErrorMessage(query.error) ?? (query.error instanceof Error ? query.error.message : undefined);
 
@@ -35,7 +46,16 @@ export function SearchPage({ airportOptions, today, onNotify }: SearchPageProps)
         <h1>Find a flight</h1>
         <p>Validated airport suggestions, polished cards, and easier booking actions.</p>
       </div>
-      <SearchForm compact onNotify={onNotify} today={today} airportOptions={airportOptions} />
+      <SearchForm
+        compact
+        onNotify={onNotify}
+        today={today}
+        airportOptions={airportOptions}
+        onFormChange={() => setIsFormDirty(true)}
+      />
+      {isFormDirty ? (
+        <AuthMessage variant="info">Search parameters changed. Click "Search flights" to update results.</AuthMessage>
+      ) : null}
       {query.isLoading ? (
         <div className="skeleton-list">
           <div className="skeleton-card" />
@@ -43,14 +63,14 @@ export function SearchPage({ airportOptions, today, onNotify }: SearchPageProps)
         </div>
       ) : null}
       {query.isError ? <AuthMessage variant="error">{errorMessage ?? "We could not retrieve flights. Please retry."}</AuthMessage> : null}
-      {!enabled ? (
+      {!enabled && !isFormDirty ? (
         <div className="empty-state">
           <div className="empty-icon"><Compass size={32} /></div>
           <h3>Choose a route to begin</h3>
           <p>Use the quick search above to explore flights from popular airports and curated destinations.</p>
         </div>
       ) : null}
-      {!query.isLoading && !query.isError && enabled && flights.length === 0 ? (
+      {!query.isLoading && !query.isError && enabled && !isFormDirty && flights.length === 0 ? (
         <div className="empty-state">
           <div className="empty-icon"><Info size={32} /></div>
           <h3>No results yet</h3>

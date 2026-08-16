@@ -5,7 +5,10 @@ from datetime import datetime, timezone
 from typing import Any
 from uuid import UUID
 
-from app.exceptions.base import ExternalAPIException, NotFoundException
+from app.exceptions.base import (
+    ExternalAPIException,
+    NotFoundException,
+)
 from app.integrations.amadeus.exceptions import (
     AmadeusAuthException,
     AmadeusConnectionException,
@@ -17,7 +20,11 @@ from app.integrations.amadeus.exceptions import (
     AmadeusTimeoutException,
 )
 from app.repositories.search_repository import SearchRepository
-from app.schemas.flight import FlightResult, FlightSearchParams, FlightSegment
+from app.schemas.flight import (
+    FlightResult,
+    FlightSearchParams,
+    FlightSegment,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -65,16 +72,18 @@ class FlightService:
         try:
             raw = await self._repository.fetch_flight_offers(params=params)
         except AmadeusNotFoundException:
-            raise NotFoundException(
-                message=f"No flights found from {params.origin} to {params.destination} "
+            msg = (
+                f"No flights found from {params.origin} to {params.destination} "
                 f"on {params.departure_date}."
             )
+            raise NotFoundException(message=msg)
         except AmadeusRateLimitException as exc:
             logger.warning("Amadeus rate limit hit during flight search.")
-            raise ExternalAPIException(
-                message="Flight search is temporarily unavailable due to rate limiting. "
+            msg = (
+                "Flight search is temporarily unavailable due to rate limiting. "
                 "Please try again shortly."
-            ) from exc
+            )
+            raise ExternalAPIException(message=msg) from exc
         except (AmadeusTimeoutException, AmadeusConnectionException) as exc:
             logger.error("Amadeus connectivity issue during flight search: %s", exc)
             raise ExternalAPIException(
@@ -82,14 +91,17 @@ class FlightService:
             ) from exc
         except AmadeusPermissionException as exc:
             logger.error("Amadeus permission denied during flight search.")
-            raise ExternalAPIException(
-                message="Flight search is not available with the current API credentials."
-            ) from exc
+            msg = (
+                "Flight search is not available with the current API credentials."
+            )
+            raise ExternalAPIException(message=msg) from exc
         except AmadeusAuthException as exc:
             logger.error("Amadeus authentication failed during flight search: %s", exc)
-            raise ExternalAPIException(
-                message="Flight search is temporarily unavailable because authentication failed."
-            ) from exc
+            msg = (
+                "Flight search is temporarily unavailable because "
+                "authentication failed."
+            )
+            raise ExternalAPIException(message=msg) from exc
         except AmadeusServerException as exc:
             logger.error("Amadeus server error during flight search: %s", exc)
             raise ExternalAPIException(
@@ -104,10 +116,11 @@ class FlightService:
         results = _transform_offers(raw, currency=params.currency)
 
         if not results:
-            raise NotFoundException(
-                message=f"No flights found from {params.origin} to {params.destination} "
+            msg = (
+                f"No flights found from {params.origin} to {params.destination} "
                 f"on {params.departure_date}."
             )
+            raise NotFoundException(message=msg)
 
         # Persist search history — fire-and-forget style; a failure here must
         # not prevent the user from receiving their results.
@@ -171,6 +184,7 @@ def _parse_offer(
 
         # Use the outbound itinerary for top-level route/time fields.
         outbound = itineraries[0]
+        outbound_segments: list[FlightSegment] = []
         all_segments: list[FlightSegment] = []
 
         for itinerary in itineraries:
@@ -178,12 +192,14 @@ def _parse_offer(
                 parsed = _parse_segment(seg, dictionaries=dictionaries)
                 if parsed:
                     all_segments.append(parsed)
+                    if itinerary is outbound:
+                        outbound_segments.append(parsed)
 
-        if not all_segments:
+        if not outbound_segments:
             return None
 
-        first_seg = all_segments[0]
-        last_seg = all_segments[-1]
+        first_seg = outbound_segments[0]
+        last_seg = outbound_segments[-1]
 
         stops = sum(max(len(itin.get("segments", [])) - 1, 0) for itin in itineraries)
 

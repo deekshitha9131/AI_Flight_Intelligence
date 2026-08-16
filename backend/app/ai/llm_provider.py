@@ -1,12 +1,13 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 import time
 from abc import ABC, abstractmethod
 
 logger = logging.getLogger(__name__)
 
-_SYSTEM_PROMPT = """You are an expert AI travel assistant for the AI Flight Intelligence Platform.
+_SYSTEM_PROMPT = """You are an expert AI travel assistant for AI Flight Intelligence.
 You help users with:
 - Flight search and booking advice
 - Fare rules and baggage policies
@@ -90,20 +91,28 @@ class GeminiProvider(LLMProvider):
                     )
 
             if not contents:
-                contents = [types.Content(role="user", parts=[types.Part.from_text(text="Hello")])]
+                contents = [
+                    types.Content(
+                        role="user",
+                        parts=[types.Part.from_text(text="Hello")],
+                    )
+                ]
 
             config = types.GenerateContentConfig(
                 system_instruction=system_instruction,
                 max_output_tokens=max_tokens,
                 temperature=0.7,
-                http_options=types.HttpOptions(timeout=15000),
+                http_options=types.HttpOptions(timeout=3000),
             )
 
-            logger.info("[LLM DISPATCH] client.aio.models.generate_content initiating...")
-            response = await client.aio.models.generate_content(
-                model=self._model,
-                contents=contents,
-                config=config,
+            logger.info("[LLM DISPATCH] generate_content initiating...")
+            response = await asyncio.wait_for(
+                client.aio.models.generate_content(
+                    model=self._model,
+                    contents=contents,
+                    config=config,
+                ),
+                timeout=3.0,
             )
 
             elapsed_ms = (time.monotonic() - t0) * 1000
@@ -114,7 +123,7 @@ class GeminiProvider(LLMProvider):
                 else None
             )
             logger.info(
-                "[LLM SUCCESS] GeminiProvider.complete | model=%s tokens=%s elapsed=%.2fms",
+                "[LLM SUCCESS] model=%s tokens=%s elapsed=%.2fms",
                 self._model,
                 tokens,
                 elapsed_ms,
@@ -138,7 +147,7 @@ class OpenAIProvider(GeminiProvider):
 
 
 class FallbackProvider(LLMProvider):
-    """No-op provider used when no LLM API key is configured."""
+    """Fallback provider used when no LLM API key is configured or during tests."""
 
     async def complete(
         self,
@@ -146,14 +155,62 @@ class FallbackProvider(LLMProvider):
         messages: list[dict[str, str]],
         max_tokens: int = 1024,
     ) -> tuple[str, int | None]:
-        user_msg = next(
-            (m["content"] for m in reversed(messages) if m["role"] == "user"),
+        sys_content = next(
+            (m["content"] for m in messages if m.get("role") == "system"),
             "",
         )
+        user_msg = next(
+            (m["content"] for m in reversed(messages) if m.get("role") == "user"),
+            "",
+        )
+
+        if "REAL FLIGHT SEARCH RESULTS for " in sys_content:
+            parts = sys_content.split("REAL FLIGHT SEARCH RESULTS for ")
+            if len(parts) > 1:
+                results_block = parts[1].split("\n\nPresent these")[0].strip()
+                lines = [
+                    line.strip()
+                    for line in results_block.split("\n")
+                    if line.strip()
+                ]
+                header_line = lines[0] if lines else "your request"
+                flight_lines = [item for item in lines if item.startswith("-")]
+                reply = (
+                    f"Here are the available flights for {header_line}:\n"
+                    + "\n".join(flight_lines)
+                )
+                return reply, None
+
+        if "FLIGHT SEARCH STATUS: " in sys_content:
+            parts = sys_content.split("FLIGHT SEARCH STATUS: ")
+            if len(parts) > 1:
+                status_text = parts[1].split(". Inform the user")[0].strip()
+                return status_text, None
+
+        if "Route understood: " in sys_content:
+            parts = sys_content.split("Route understood: ")
+            if len(parts) > 1:
+                route_text = parts[1].split(". Departure date is missing.")[0].strip()
+                return (
+                    f"I understand you want to fly from {route_text}. "
+                    "What date or time would you like to depart?"
+                ), None
+
+        greetings = {
+            "hi", "hello", "hey", "hii", "good morning", "good afternoon",
+            "good evening", "thanks", "thank you", "what can you do?", "help"
+        }
+        if user_msg.strip().lower() in greetings:
+            return (
+                "Hello! I am your AI travel assistant for AI Flight "
+                "Intelligence Platform. How can I help you with your flight "
+                "search or travel plans today?"
+            ), None
+
         reply = (
             f'I received your message: "{user_msg[:100]}". '
-            "The AI assistant is currently running in demo mode — no LLM API key is configured. "
-            "Please add GEMINI_API_KEY to your .env file to enable full assistant capabilities."
+            "The AI assistant is currently running in demo mode. "
+            "Please configure GEMINI_API_KEY for full conversational AI capabilities."
         )
         logger.debug("FallbackProvider.complete | returning demo response.")
         return reply, None
@@ -169,7 +226,9 @@ def build_llm_provider() -> LLMProvider:
     ).strip()
 
     if api_key:
-        model: str = (getattr(settings, "gemini_model", "gemini-3.1-flash-lite") or "gemini-3.1-flash-lite").strip()
+        default_model = "gemini-3.1-flash-lite"
+        model_setting = getattr(settings, "gemini_model", default_model)
+        model: str = (model_setting or default_model).strip()
         base_url: str = (getattr(settings, "gemini_base_url", "") or "").strip()
         logger.info("LLM provider: Gemini (model=%s)", model)
         return GeminiProvider(api_key=api_key, model=model, base_url=base_url)

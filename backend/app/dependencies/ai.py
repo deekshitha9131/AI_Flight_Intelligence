@@ -19,7 +19,7 @@ from sqlalchemy.orm import Session
 
 
 def get_model_loader(request: Request) -> ModelLoader:
-    """Return the ModelLoader stored on app.state at startup, initializing a singleton if uninitialized."""
+    """Return ModelLoader from app.state, initializing a singleton if uninitialized."""
     loader = getattr(request.app.state, "model_loader", None)
     if loader is None:
         from app.ai.model_loader import get_model_loader as _get_singleton
@@ -28,9 +28,8 @@ def get_model_loader(request: Request) -> ModelLoader:
     return loader
 
 
-
 def get_llm_provider(request: Request) -> LLMProvider:
-    """Return the LLMProvider stored on app.state at startup, falling back to build_llm_provider if uninitialized."""
+    """Return LLMProvider from app.state, falling back to build_llm_provider."""
     provider = getattr(request.app.state, "llm_provider", None)
     if provider is None:
         from app.ai.llm_provider import build_llm_provider
@@ -76,12 +75,22 @@ def get_recommendation_service(
 
 
 def get_assistant_service(
+    request: Request,
     db: Session = Depends(get_db),
     llm_provider: LLMProvider = Depends(get_llm_provider),
 ) -> AssistantService:
+    from app.dependencies.amadeus import get_flight_provider
+    from app.repositories.search_repository import SearchRepository
+    from app.services.flight_service import FlightService
+
+    provider = get_flight_provider(request)
+    search_repo = SearchRepository(provider=provider, db=db)
+    flight_service = FlightService(repository=search_repo)
+
     return AssistantService(
         chat_repo=ChatRepository(db=db),
         llm_provider=llm_provider,
+        flight_service=flight_service,
     )
 
 

@@ -1,9 +1,3 @@
-"""
-tests/test_llm.py
-------------------
-Regression tests for Gemini provider configuration, initialization, and fallback logic.
-"""
-
 from unittest.mock import AsyncMock, patch
 
 import pytest

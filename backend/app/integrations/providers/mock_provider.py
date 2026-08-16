@@ -1,8 +1,8 @@
 from __future__ import annotations
 
+import copy
 import json
 import logging
-from datetime import date, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 
 class MockProvider(FlightProvider):
-    """Return realistic mock flight-offer payloads that match the Amadeus shape."""
+    """Return realistic mock flight-offer payloads matching Amadeus structure."""
 
     def __init__(self, data_file: str | None = None) -> None:
         base_dir = Path(__file__).resolve().parents[2]
@@ -32,27 +32,65 @@ class MockProvider(FlightProvider):
         filtered = [offer for offer in self._offers if self._matches(params, offer)]
         if not filtered:
             filtered = self._generate_dynamic_offers(params)
-        filtered = sorted(filtered, key=lambda offer: self._price_value(offer))
-        filtered = filtered[: params.max_results]
-        return {"data": filtered, "dictionaries": self._dictionaries()}
 
-    def _generate_dynamic_offers(self, params: FlightSearchParams) -> list[dict[str, Any]]:
+        dep_str = params.departure_date.isoformat()
+        arr_str = params.return_date.isoformat() if params.return_date else None
+
+        updated_offers = []
+        for offer in filtered:
+            off = copy.deepcopy(offer)
+            itineraries = off.get("itineraries", [])
+            if itineraries:
+                outbound = itineraries[0]
+                for seg in outbound.get("segments", []):
+                    dep_at = seg.get("departure", {}).get("at", "")
+                    time_part = dep_at.split("T")[1] if "T" in dep_at else "08:00:00"
+                    seg["departure"]["at"] = f"{dep_str}T{time_part}"
+
+                    arr_at = seg.get("arrival", {}).get("at", "")
+                    arr_time = arr_at.split("T")[1] if "T" in arr_at else "10:30:00"
+                    seg["arrival"]["at"] = f"{dep_str}T{arr_time}"
+            if len(itineraries) > 1 and arr_str:
+                inbound = itineraries[1]
+                for seg in inbound.get("segments", []):
+                    dep_at = seg.get("departure", {}).get("at", "")
+                    time_part = dep_at.split("T")[1] if "T" in dep_at else "12:00:00"
+                    seg["departure"]["at"] = f"{arr_str}T{time_part}"
+
+                    arr_at = seg.get("arrival", {}).get("at", "")
+                    arr_time = arr_at.split("T")[1] if "T" in arr_at else "14:30:00"
+                    seg["arrival"]["at"] = f"{arr_str}T{arr_time}"
+            updated_offers.append(off)
+
+        updated_offers = sorted(
+            updated_offers, key=lambda offer: self._price_value(offer)
+        )
+        updated_offers = updated_offers[: params.max_results]
+        return {"data": updated_offers, "dictionaries": self._dictionaries()}
+
+    def _generate_dynamic_offers(
+        self, params: FlightSearchParams
+    ) -> list[dict[str, Any]]:
         """Generate realistic mock flight offers when static JSON lacks the route."""
         dep_str = params.departure_date.isoformat()
         arr_str = params.return_date.isoformat() if params.return_date else None
-        
+
         # Deterministic base price from origin + destination
         seed = abs(hash(f"{params.origin}{params.destination}"))
         base_price = 120.0 + (seed % 250)
-        
-        airlines = [("6E", "201", "320"), ("AI", "505", "321"), ("EK", "512", "77W")]
+
+        airlines = [
+            ("6E", "201", "320"),
+            ("AI", "505", "321"),
+            ("EK", "512", "77W"),
+        ]
         offers = []
 
         for i, (carrier, flight_num, aircraft) in enumerate(airlines):
             price = round(base_price + (i * 35.5), 2)
             dep_hour = 6 + (i * 5)
             arr_hour = dep_hour + 2
-            
+
             offer = {
                 "id": f"mock-offer-dyn-{i+1}",
                 "itineraries": [
@@ -60,8 +98,14 @@ class MockProvider(FlightProvider):
                         "duration": "PT2H30M",
                         "segments": [
                             {
-                                "departure": {"iataCode": params.origin.upper(), "at": f"{dep_str}T{dep_hour:02d}:00:00"},
-                                "arrival": {"iataCode": params.destination.upper(), "at": f"{dep_str}T{arr_hour:02d}:30:00"},
+                                "departure": {
+                                    "iataCode": params.origin.upper(),
+                                    "at": f"{dep_str}T{dep_hour:02d}:00:00",
+                                },
+                                "arrival": {
+                                    "iataCode": params.destination.upper(),
+                                    "at": f"{dep_str}T{arr_hour:02d}:30:00",
+                                },
                                 "carrierCode": carrier,
                                 "number": flight_num,
                                 "duration": "PT2H30M",
@@ -70,32 +114,45 @@ class MockProvider(FlightProvider):
                         ],
                     }
                 ],
-                "price": {"grandTotal": str(price), "currency": params.currency.upper()},
+                "price": {
+                    "grandTotal": str(price),
+                    "currency": params.currency.upper(),
+                },
                 "travelerPricings": [
                     {
                         "travelerType": "ADULT",
                         "price": {"total": str(price)},
-                        "fareDetailsBySegment": [{"cabin": params.travel_class.value}],
+                        "fareDetailsBySegment": [
+                            {"cabin": params.travel_class.value}
+                        ],
                     }
                 ],
                 "numberOfBookableSeats": 7 - i,
             }
-            
+
             if arr_str:
-                offer["itineraries"].append({
-                    "duration": "PT2H30M",
-                    "segments": [
-                        {
-                            "departure": {"iataCode": params.destination.upper(), "at": f"{arr_str}T10:00:00"},
-                            "arrival": {"iataCode": params.origin.upper(), "at": f"{arr_str}T12:30:00"},
-                            "carrierCode": carrier,
-                            "number": str(int(flight_num) + 1),
-                            "duration": "PT2H30M",
-                            "aircraft": {"code": aircraft},
-                        }
-                    ],
-                })
-            
+                offer["itineraries"].append(
+                    {
+                        "duration": "PT2H30M",
+                        "segments": [
+                            {
+                                "departure": {
+                                    "iataCode": params.destination.upper(),
+                                    "at": f"{arr_str}T10:00:00",
+                                },
+                                "arrival": {
+                                    "iataCode": params.origin.upper(),
+                                    "at": f"{arr_str}T12:30:00",
+                                },
+                                "carrierCode": carrier,
+                                "number": str(int(flight_num) + 1),
+                                "duration": "PT2H30M",
+                                "aircraft": {"code": aircraft},
+                            }
+                        ],
+                    }
+                )
+
             offers.append(offer)
 
         return offers
@@ -108,9 +165,9 @@ class MockProvider(FlightProvider):
 
         first_segment = segments[0]
         last_segment = segments[-1]
-        if first_segment.get("departure", {}).get("iataCode") != params.origin.upper():
-            return False
-        if last_segment.get("arrival", {}).get("iataCode") != params.destination.upper():
+        orig = first_segment.get("departure", {}).get("iataCode")
+        dest = last_segment.get("arrival", {}).get("iataCode")
+        if orig != params.origin.upper() or dest != params.destination.upper():
             return False
 
         travel_class = offer.get("travelerPricings", [{}])[0].get(

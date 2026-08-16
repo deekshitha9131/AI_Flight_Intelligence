@@ -373,3 +373,55 @@ class TestRefreshToken:
             headers={"Authorization": f"Bearer {new_access}"},
         )
         assert me_response.status_code == 200
+
+
+# ---------------------------------------------------------------------------
+# Password Change tests
+# ---------------------------------------------------------------------------
+
+
+class TestPasswordChange:
+    async def test_change_password_success(
+        self, client: AsyncClient, user_payload, registered_user, auth_headers
+    ) -> None:
+        payload = user_payload()
+        old_password = payload["password"]
+        new_password = "BrandNewPassword123!"
+
+        response = await client.post(
+            "/api/v1/auth/change-password",
+            headers=auth_headers,
+            json={
+                "current_password": old_password,
+                "new_password": new_password,
+            },
+        )
+        assert response.status_code == 200
+        body = response.json()
+        assert body["success"] is True
+        assert "password" not in body
+        assert "password_hash" not in body
+
+        # Old password no longer works
+        old_login = await _login(client, payload["email"], old_password)
+        assert old_login.status_code == 401
+
+        # New password works
+        new_login = await _login(client, payload["email"], new_password)
+        assert new_login.status_code == 200
+        assert "access_token" in new_login.json()["data"]
+
+    async def test_change_password_invalid_current_password_returns_401(
+        self, client: AsyncClient, auth_headers
+    ) -> None:
+        response = await client.post(
+            "/api/v1/auth/change-password",
+            headers=auth_headers,
+            json={
+                "current_password": "WrongCurrentPassword123!",
+                "new_password": "BrandNewPassword123!",
+            },
+        )
+        assert response.status_code == 401
+        assert response.json()["success"] is False
+
