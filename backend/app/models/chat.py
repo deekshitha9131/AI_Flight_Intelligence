@@ -27,6 +27,10 @@ class ChatConversation(Base):
         String(200), nullable=False, default="New Conversation"
     )
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    context_json: Mapped[str | None] = mapped_column(
+        Text, nullable=True, default=None,
+        doc="JSON-serialized structured flight context for multi-turn state.",
+    )
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),

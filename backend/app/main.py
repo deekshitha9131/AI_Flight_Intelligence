@@ -62,16 +62,22 @@ async def lifespan(app: FastAPI) -> Any:
         logger.warning("Database connection check failed")
 
     amadeus_client: AmadeusClient | None = None
-    if settings.flight_provider.lower() == "amadeus":
+    provider_name = settings.flight_provider.lower()
+    if provider_name == "amadeus":
         try:
             amadeus_client = AmadeusClient.from_settings()
             app.state.amadeus = amadeus_client
             logger.info("Amadeus Flight Provider Enabled")
         except Exception as err:
-            logger.warning("Failed to initialize AmadeusClient (%s). Falling back to Mock Flight Provider.", err)
-            logger.info("Mock Flight Provider Enabled")
+            logger.error("Failed to initialize AmadeusClient: %s", err)
+    elif provider_name == "duffel" or settings.duffel_token:
+        logger.info("Duffel Flight Provider Enabled")
     else:
-        logger.info("Mock Flight Provider Enabled")
+        logger.warning(
+            "No flight provider configured (FLIGHT_PROVIDER=%s). "
+            "Set FLIGHT_PROVIDER=duffel and provide DUFFEL_ACCESS_TOKEN.",
+            settings.flight_provider,
+        )
 
     model_loader = ModelLoader()
     model_loader.load()

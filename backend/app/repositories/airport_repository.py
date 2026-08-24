@@ -49,7 +49,10 @@ class AirportRepository:
             country = ap["address"]["countryName"].lower()
             if term == code or term in name or term in city or term in country:
                 matches.append(ap)
+
         return {"data": matches}
+
+
 
 
 _MOCK_AIRPORTS: list[dict[str, Any]] = [
@@ -173,5 +176,86 @@ _MOCK_AIRPORTS: list[dict[str, Any]] = [
         "geoCode": {"latitude": 52.3105, "longitude": 4.7683},
         "address": {"cityName": "Amsterdam", "cityCode": "AMS", "countryName": "Netherlands", "countryCode": "NL"},
     },
+    {
+        "type": "location",
+        "subType": "AIRPORT",
+        "name": "Chennai International Airport",
+        "detailedName": "CHENNAI/IN:CHENNAI INTL",
+        "id": "AMAA",
+        "iataCode": "MAA",
+        "geoCode": {"latitude": 12.9941, "longitude": 80.1709},
+        "address": {"cityName": "Chennai", "cityCode": "MAA", "countryName": "India", "countryCode": "IN"},
+    },
+    {
+        "type": "location",
+        "subType": "AIRPORT",
+        "name": "Netaji Subhash Chandra Bose International Airport",
+        "detailedName": "KOLKATA/IN:NETAJI SUBHASH CHANDRA BOSE",
+        "id": "ACCU",
+        "iataCode": "CCU",
+        "geoCode": {"latitude": 22.6547, "longitude": 88.4467},
+        "address": {"cityName": "Kolkata", "cityCode": "CCU", "countryName": "India", "countryCode": "IN"},
+    },
+    {
+        "type": "location",
+        "subType": "AIRPORT",
+        "name": "London Gatwick Airport",
+        "detailedName": "LONDON/GB:GATWICK",
+        "id": "ALGW",
+        "iataCode": "LGW",
+        "geoCode": {"latitude": 51.1537, "longitude": -0.1821},
+        "address": {"cityName": "London", "cityCode": "LON", "countryName": "United Kingdom", "countryCode": "GB"},
+    },
+    {
+        "type": "location",
+        "subType": "AIRPORT",
+        "name": "Newark Liberty International Airport",
+        "detailedName": "NEWARK/US:NEWARK LIBERTY INTL",
+        "id": "AEWR",
+        "iataCode": "EWR",
+        "geoCode": {"latitude": 40.6895, "longitude": -74.1745},
+        "address": {"cityName": "New York", "cityCode": "NYC", "countryName": "United States", "countryCode": "US"},
+    },
+    {
+        "type": "location",
+        "subType": "AIRPORT",
+        "name": "Los Angeles International Airport",
+        "detailedName": "LOS ANGELES/US:LOS ANGELES INTL",
+        "id": "ALAX",
+        "iataCode": "LAX",
+        "geoCode": {"latitude": 33.9416, "longitude": -118.4085},
+        "address": {"cityName": "Los Angeles", "cityCode": "LAX", "countryName": "United States", "countryCode": "US"},
+    },
+    {
+        "type": "location",
+        "subType": "AIRPORT",
+        "name": "Charles de Gaulle Airport",
+        "detailedName": "PARIS/FR:CHARLES DE GAULLE",
+        "id": "ACDG",
+        "iataCode": "CDG",
+        "geoCode": {"latitude": 49.0097, "longitude": 2.5479},
+        "address": {"cityName": "Paris", "cityCode": "PAR", "countryName": "France", "countryCode": "FR"},
+    },
+    {
+        "type": "location",
+        "subType": "AIRPORT",
+        "name": "Tokyo Haneda Airport",
+        "detailedName": "TOKYO/JP:HANEDA",
+        "id": "AHND",
+        "iataCode": "HND",
+        "geoCode": {"latitude": 35.5494, "longitude": 139.7798},
+        "address": {"cityName": "Tokyo", "cityCode": "TYO", "countryName": "Japan", "countryCode": "JP"},
+    },
+    {
+        "type": "location",
+        "subType": "AIRPORT",
+        "name": "Incheon International Airport",
+        "detailedName": "SEOUL/KR:INCHEON INTL",
+        "id": "AICN",
+        "iataCode": "ICN",
+        "geoCode": {"latitude": 37.4602, "longitude": 126.4407},
+        "address": {"cityName": "Seoul", "cityCode": "SEL", "countryName": "South Korea", "countryCode": "KR"},
+    },
+
 ]
 

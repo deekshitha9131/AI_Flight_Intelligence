@@ -24,19 +24,28 @@ import { useAuthStore } from "./store/auth";
 
 const today = new Date().toISOString().slice(0, 10);
 const airportOptions = [
-  { code: "HYD", label: "Hyderabad (HYD)", city: "Hyderabad", country: "India" },
-  { code: "DEL", label: "Delhi (DEL)", city: "Delhi", country: "India" },
-  { code: "BOM", label: "Mumbai (BOM)", city: "Mumbai", country: "India" },
-  { code: "BLR", label: "Bengaluru (BLR)", city: "Bengaluru", country: "India" },
-  { code: "DXB", label: "Dubai (DXB)", city: "Dubai", country: "UAE" },
-  { code: "LHR", label: "London Heathrow (LHR)", city: "London", country: "United Kingdom" },
-  { code: "JFK", label: "New York JFK (JFK)", city: "New York", country: "USA" },
-  { code: "SIN", label: "Singapore (SIN)", city: "Singapore", country: "Singapore" },
-  { code: "BKK", label: "Bangkok (BKK)", city: "Bangkok", country: "Thailand" },
-  { code: "SFO", label: "San Francisco (SFO)", city: "San Francisco", country: "USA" },
-  { code: "FRA", label: "Frankfurt (FRA)", city: "Frankfurt", country: "Germany" },
-  { code: "AMS", label: "Amsterdam (AMS)", city: "Amsterdam", country: "Netherlands" },
+  { code: "HYD", label: "Rajiv Gandhi International Airport (HYD)", city: "Hyderabad", country: "India" },
+  { code: "DEL", label: "Indira Gandhi International Airport (DEL)", city: "Delhi", country: "India" },
+  { code: "BOM", label: "Chhatrapati Shivaji Maharaj International Airport (BOM)", city: "Mumbai", country: "India" },
+  { code: "BLR", label: "Kempegowda International Airport (BLR)", city: "Bengaluru", country: "India" },
+  { code: "MAA", label: "Chennai International Airport (MAA)", city: "Chennai", country: "India" },
+  { code: "CCU", label: "Netaji Subhash Chandra Bose International Airport (CCU)", city: "Kolkata", country: "India" },
+  { code: "DXB", label: "Dubai International Airport (DXB)", city: "Dubai", country: "UAE" },
+  { code: "LHR", label: "London Heathrow Airport (LHR)", city: "London", country: "United Kingdom" },
+  { code: "LGW", label: "London Gatwick Airport (LGW)", city: "London", country: "United Kingdom" },
+  { code: "JFK", label: "John F. Kennedy International Airport (JFK)", city: "New York", country: "USA" },
+  { code: "EWR", label: "Newark Liberty International Airport (EWR)", city: "New York", country: "USA" },
+  { code: "LAX", label: "Los Angeles International Airport (LAX)", city: "Los Angeles", country: "USA" },
+  { code: "SFO", label: "San Francisco International Airport (SFO)", city: "San Francisco", country: "USA" },
+  { code: "SIN", label: "Singapore Changi Airport (SIN)", city: "Singapore", country: "Singapore" },
+  { code: "BKK", label: "Suvarnabhumi Airport (BKK)", city: "Bangkok", country: "Thailand" },
+  { code: "FRA", label: "Frankfurt Airport (FRA)", city: "Frankfurt", country: "Germany" },
+  { code: "AMS", label: "Amsterdam Airport Schiphol (AMS)", city: "Amsterdam", country: "Netherlands" },
+  { code: "CDG", label: "Charles de Gaulle Airport (CDG)", city: "Paris", country: "France" },
+  { code: "HND", label: "Tokyo Haneda Airport (HND)", city: "Tokyo", country: "Japan" },
+  { code: "ICN", label: "Incheon International Airport (ICN)", city: "Seoul", country: "South Korea" },
 ];
+
 
 const Protected = ({ children }: { children: ReactElement }) => {
   const isHydrated = useAuthStore((s) => s.isHydrated);

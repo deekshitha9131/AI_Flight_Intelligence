@@ -46,14 +46,25 @@ class Settings(BaseSettings):
         default="http://localhost:3000,http://localhost:5173,http://127.0.0.1:3000,http://127.0.0.1:5173"
     )
 
-    # Amadeus (Optional / Deprecated in favor of Mock Data)
+    # Amadeus (Optional / Legacy)
     amadeus_api_key: str = Field(default="")
     amadeus_api_secret: str = Field(default="")
     amadeus_base_url: str = Field(default="https://test.api.amadeus.com")
     amadeus_timeout_seconds: float = Field(default=10.0)
 
     # Flight provider
-    flight_provider: str = Field(default="mock")
+    flight_provider: str = Field(default="duffel")
+
+    # Duffel API Integration
+    duffel_api_token: str = Field(default="")
+    duffel_access_token: str = Field(default="")
+    duffel_base_url: str = Field(default="https://api.duffel.com")
+    duffel_timeout_seconds: float = Field(default=15.0)
+
+    @property
+    def duffel_token(self) -> str:
+        return (self.duffel_api_token or self.duffel_access_token or "").strip()
+
 
     # AI (Gemini Integration)
     gemini_api_key: str = Field(default="")
@@ -61,8 +72,10 @@ class Settings(BaseSettings):
     gemini_base_url: str = Field(
         default="https://generativelanguage.googleapis.com/v1beta/openai/"
     )
+    gemini_timeout_seconds: float = Field(default=30.0)
     openai_api_key: str = Field(default="")
     openai_model: str = Field(default="gpt-3.5-turbo")
+
 
     @field_validator("app_name", mode="before")
     @classmethod

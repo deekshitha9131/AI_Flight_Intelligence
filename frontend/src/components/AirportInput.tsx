@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, KeyboardEvent } from "react";
+import { searchAirports } from "../api/airports";
 import type { AirportOption } from "../types";
 
 type AirportInputProps = {
@@ -18,7 +19,12 @@ export function AirportInput({
 }: AirportInputProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [filterText, setFilterText] = useState(value);
+  const [remoteResults, setRemoteResults] = useState<AirportOption[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [selectedIndex, setSelectedIndex] = useState<number>(-1);
+
   const containerRef = useRef<HTMLDivElement>(null);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     setFilterText(value);
@@ -35,7 +41,42 @@ export function AirportInput({
   }, []);
 
   const searchKeyword = filterText.trim().toLowerCase();
-  const matches = airportOptions.filter((item) => {
+
+  // Perform debounced live backend airport search
+  useEffect(() => {
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+    }
+
+    if (searchKeyword.length < 2) {
+      setRemoteResults([]);
+      setIsLoading(false);
+      return;
+    }
+
+    setIsLoading(true);
+    timerRef.current = setTimeout(() => {
+      searchAirports(searchKeyword)
+        .then((results) => {
+          setRemoteResults(results);
+        })
+        .catch(() => {
+          setRemoteResults([]);
+        })
+        .finally(() => {
+          setIsLoading(false);
+        });
+    }, 300);
+
+    return () => {
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+      }
+    };
+  }, [searchKeyword]);
+
+  // Combine static options and dynamic search results
+  const localMatches = airportOptions.filter((item) => {
     if (!searchKeyword) return true;
     return (
       item.code.toLowerCase().includes(searchKeyword) ||
@@ -45,13 +86,46 @@ export function AirportInput({
     );
   });
 
-  const popularCodes = ["HYD", "DXB", "DEL", "BOM", "LHR", "SIN", "BKK"];
+  const combinedMap = new Map<string, AirportOption>();
+  localMatches.forEach((item) => combinedMap.set(item.code, item));
+  remoteResults.forEach((item) => combinedMap.set(item.code, item));
+
+  // Limit display to top 10 matches
+  const matches = Array.from(combinedMap.values()).slice(0, 10);
+
+  const popularCodes = ["HYD", "BOM", "DEL", "BLR", "DXB", "LHR", "JFK", "SIN"];
   const popularChips = airportOptions.filter((item) => popularCodes.includes(item.code));
 
   const handleSelect = (code: string) => {
     onChange(code);
     setFilterText(code);
     setIsOpen(false);
+    setSelectedIndex(-1);
+  };
+
+  const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (!isOpen) {
+      if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+        setIsOpen(true);
+      }
+      return;
+    }
+
+    if (e.key === "Escape") {
+      setIsOpen(false);
+      setSelectedIndex(-1);
+    } else if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setSelectedIndex((prev) => (prev < matches.length - 1 ? prev + 1 : 0));
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setSelectedIndex((prev) => (prev > 0 ? prev - 1 : matches.length - 1));
+    } else if (e.key === "Enter") {
+      if (selectedIndex >= 0 && selectedIndex < matches.length) {
+        e.preventDefault();
+        handleSelect(matches[selectedIndex].code);
+      }
+    }
   };
 
   return (
@@ -65,20 +139,23 @@ export function AirportInput({
           placeholder={placeholder}
           maxLength={50}
           onFocus={() => setIsOpen(true)}
+          onKeyDown={handleKeyDown}
           onChange={(e) => {
             const val = e.target.value;
             setFilterText(val);
             onChange(val.toUpperCase().slice(0, 3));
             setIsOpen(true);
+            setSelectedIndex(-1);
           }}
         />
         {isOpen && (
           <div className="airport-dropdown">
-            {matches.length > 0 ? (
-              matches.map((item) => (
+            {isLoading && <div className="dropdown-no-results">Searching airports...</div>}
+            {!isLoading && matches.length > 0 ? (
+              matches.map((item, idx) => (
                 <button
                   key={item.code}
-                  className="dropdown-item"
+                  className={`dropdown-item ${idx === selectedIndex ? "selected" : ""}`}
                   type="button"
                   onClick={() => handleSelect(item.code)}
                 >
@@ -91,9 +168,9 @@ export function AirportInput({
                   </div>
                 </button>
               ))
-            ) : (
+            ) : !isLoading ? (
               <div className="dropdown-no-results">No matching airports</div>
-            )}
+            ) : null}
           </div>
         )}
       </div>

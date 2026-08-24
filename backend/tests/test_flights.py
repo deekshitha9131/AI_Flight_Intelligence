@@ -247,6 +247,40 @@ class TestFlightSearchSuccess:
         assert flight["stops"] == 0
         assert "search_id" in response.json()
 
+    @pytest.mark.parametrize(
+        "orig,dest",
+        [
+            ("HYD", "BOM"),
+            ("HYD", "DEL"),
+            ("DEL", "BOM"),
+            ("HYD", "DXB"),
+            ("JFK", "LAX"),
+            ("BLR", "DXB"),
+        ],
+    )
+    async def test_arbitrary_airport_pairs_search(
+        self, orig: str, dest: str, client: AsyncClient, auth_headers: dict, app
+    ) -> None:
+        mock = _mock_amadeus(_AMADEUS_FLIGHT_RESPONSE)
+        app.dependency_overrides[get_amadeus_client] = lambda: mock
+
+        response = await client.get(
+            "/api/v1/flights/search",
+            params={
+                "origin": orig,
+                "destination": dest,
+                "departure_date": "2030-12-01",
+            },
+            headers=auth_headers,
+        )
+        app.dependency_overrides.pop(get_amadeus_client, None)
+
+        assert response.status_code == 200
+        body = response.json()
+        assert body["success"] is True
+        assert body["count"] >= 1
+
+
     async def test_no_flights_returns_404(
         self, client: AsyncClient, auth_headers: dict, app
     ) -> None:

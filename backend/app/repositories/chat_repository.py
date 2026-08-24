@@ -16,10 +16,6 @@ class ChatRepository:
     def __init__(self, db: Session) -> None:
         self._db = db
 
-    # ------------------------------------------------------------------
-    # Conversations
-    # ------------------------------------------------------------------
-
     def create_conversation(
         self, *, user_id: UUID, title: str = "New Conversation"
     ) -> ChatConversation:
@@ -153,3 +149,42 @@ class ChatRepository:
             )
             or 0
         )
+
+    # ------------------------------------------------------------------
+    # Structured conversation context
+    # ------------------------------------------------------------------
+
+    def get_conversation_context(self, *, conversation_id: UUID) -> dict | None:
+        """Load the structured flight context JSON for a conversation.
+
+        Returns the deserialized dict, or None if no context is stored.
+        """
+        import json
+
+        raw = self._db.scalar(
+            select(ChatConversation.context_json).where(
+                ChatConversation.id == conversation_id
+            )
+        )
+        if not raw:
+            return None
+        try:
+            return json.loads(raw)
+        except (json.JSONDecodeError, TypeError):
+            logger.warning(
+                "Failed to parse context_json for conversation %s", conversation_id
+            )
+            return None
+
+    def update_conversation_context(
+        self, *, conversation_id: UUID, context: dict
+    ) -> None:
+        """Persist the structured flight context JSON for a conversation."""
+        import json
+
+        self._db.execute(
+            update(ChatConversation)
+            .where(ChatConversation.id == conversation_id)
+            .values(context_json=json.dumps(context, default=str))
+        )
+        self._db.flush()

@@ -34,16 +34,18 @@ export function SearchForm({ compact = false, onNotify, onFormChange, today, air
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
-    const originOption = airportOptions.find((item) => item.code === origin.toUpperCase());
-    const destinationOption = airportOptions.find((item) => item.code === destination.toUpperCase());
-    if (!originOption || !destinationOption) {
-      onNotify?.("Please pick a known airport from the suggestions.", "warning");
+    const iataRegex = /^[A-Z]{3}$/;
+    const origUpper = origin.trim().toUpperCase();
+    const destUpper = destination.trim().toUpperCase();
+    if (!iataRegex.test(origUpper) || !iataRegex.test(destUpper)) {
+      onNotify?.("Please enter valid 3-letter airport IATA codes (e.g. HYD, BOM, DEL, DXB).", "warning");
       return;
     }
-    if (origin.toUpperCase() === destination.toUpperCase()) {
+    if (origUpper === destUpper) {
       onNotify?.("Origin and destination must be different.", "warning");
       return;
     }
+
     if (typeof window !== "undefined") {
       const current = Number(window.localStorage.getItem("ai-flight-analytics-searches") ?? "0");
       window.localStorage.setItem("ai-flight-analytics-searches", String(current + 1));
