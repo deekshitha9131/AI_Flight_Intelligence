@@ -29,7 +29,7 @@ class ThreadQueryParams(BaseModel):
 class ThreadSummarySchema(BaseModel):
     """One row in the thread list — metadata plus email_count, never
     the emails themselves. Per Task 4.4's own instruction: "the list
-    must not load full email bodies.\""""
+    must not load full email bodies.\" """
 
     model_config = ConfigDict(from_attributes=True)
 

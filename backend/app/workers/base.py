@@ -1,5 +1,3 @@
-
-import asyncio
 from collections.abc import Coroutine
 from typing import Any, TypeVar
 
@@ -7,6 +5,7 @@ import structlog
 from celery import Task
 
 from app.core.config import get_settings
+from app.workers import worker_state
 
 logger = structlog.get_logger(__name__)
 
@@ -26,7 +25,7 @@ DEFAULT_TASK_RETRY_KWARGS: dict[str, Any] = {
 class BaseTask(Task):  # type: ignore[misc]
     abstract = True
 
-    def run_async(self, coro: Coroutine[Any, Any, T]) -> T: 
+    def run_async(self, coro: Coroutine[Any, Any, T]) -> T:
 
         loop = worker_state.get_worker_loop()
         return loop.run_until_complete(coro)

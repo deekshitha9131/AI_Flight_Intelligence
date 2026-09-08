@@ -4,7 +4,7 @@ from app.core.config import Settings
 
 
 def create_db_engine(settings: Settings) -> AsyncEngine:
-    
+
     return create_async_engine(
         settings.database_url,
         pool_size=settings.database_pool_size,
@@ -17,5 +17,5 @@ def create_db_engine(settings: Settings) -> AsyncEngine:
 
 
 async def dispose_engine(engine: AsyncEngine) -> None:
-   
+
     await engine.dispose()

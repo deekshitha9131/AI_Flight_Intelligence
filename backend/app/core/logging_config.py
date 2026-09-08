@@ -11,7 +11,6 @@ def configure_logging() -> None:
 
     settings = get_settings()
 
-
     shared_processors: list[structlog.types.Processor] = [
         structlog.contextvars.merge_contextvars,
         structlog.stdlib.add_log_level,
@@ -47,7 +46,6 @@ def configure_logging() -> None:
     root_logger.handlers = [handler]
     root_logger.setLevel(logging.DEBUG if settings.app_debug else logging.INFO)
 
-   
     logging.getLogger("uvicorn.access").setLevel(logging.WARNING)
     logging.getLogger("sqlalchemy.engine").setLevel(
         logging.INFO if settings.app_debug else logging.WARNING

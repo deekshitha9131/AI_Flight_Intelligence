@@ -4,6 +4,7 @@ from datetime import UTC, datetime, timedelta
 from app.domain.entities.user import User
 from app.domain.exceptions.auth import (
     InvalidOAuthStateError,
+    OAuthNotConfiguredError,
     OAuthExchangeError,
     SessionNotFoundError,
 )
@@ -34,6 +35,11 @@ class AuthService:
         concern, even though where it's stored (a cookie) is the
         router's job.
         """
+        if self._oauth_client is None or not getattr(self._oauth_client, "is_configured", True):
+            raise OAuthNotConfiguredError(
+                "Google OAuth is not configured. Set GOOGLE_CLIENT_ID and "
+                "GOOGLE_CLIENT_SECRET in backend/.env."
+            )
         state = secrets.token_urlsafe(32)
         authorization_url = self._oauth_client.build_authorization_url(state=state)
         return authorization_url, state
@@ -41,6 +47,8 @@ class AuthService:
     async def handle_callback(
         self, *, code: str, state: str, state_cookie_value: str | None
     ) -> tuple[User, str]:
+        if self._oauth_client is None:
+            raise InvalidOAuthStateError("OAuth client is not configured.")
         if state_cookie_value is None or not secrets.compare_digest(state, state_cookie_value):
             raise InvalidOAuthStateError(
                 "OAuth state mismatch — this can happen if the login attempt "

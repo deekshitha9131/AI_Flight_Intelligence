@@ -70,7 +70,9 @@ def _email(*, thread_id, user_id) -> Email:
 
 
 class FakeThreadRepository:
-    def __init__(self, *, threads: list[Thread] | None = None, emails_by_thread: dict | None = None) -> None:
+    def __init__(
+        self, *, threads: list[Thread] | None = None, emails_by_thread: dict | None = None
+    ) -> None:
         self._threads = {t.id: t for t in (threads or [])}
         self._emails_by_thread = emails_by_thread or {}
         self.list_by_user_calls: list[dict] = []
@@ -88,10 +90,15 @@ class FakeThreadRepository:
         self.list_by_user_calls.append({"user_id": user_id, **kwargs})
         return [
             ThreadSummary(
-                id=t.id, gmail_thread_id=t.gmail_thread_id, subject=t.subject,
-                snippet=t.snippet, updated_at=t.updated_at, email_count=0,
+                id=t.id,
+                gmail_thread_id=t.gmail_thread_id,
+                subject=t.subject,
+                snippet=t.snippet,
+                updated_at=t.updated_at,
+                email_count=0,
             )
-            for t in self._threads.values() if t.user_id == user_id
+            for t in self._threads.values()
+            if t.user_id == user_id
         ]
 
     async def count_by_user(self, user_id):
@@ -109,7 +116,12 @@ async def test_list_threads_passes_params_through() -> None:
 
     await service.list_threads(user, page=2, page_size=10, sort="oldest")
 
-    assert repo.list_by_user_calls[0] == {"user_id": user.id, "page": 2, "page_size": 10, "sort": "oldest"}
+    assert repo.list_by_user_calls[0] == {
+        "user_id": user.id,
+        "page": 2,
+        "page_size": 10,
+        "sort": "oldest",
+    }
 
 
 async def test_list_threads_returns_items_and_total() -> None:

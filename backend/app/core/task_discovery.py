@@ -7,7 +7,7 @@ logger = structlog.get_logger(__name__)
 
 
 def discover_tasks(package_names: list[str]) -> None:
-    
+
     for package_name in package_names:
         package = importlib.import_module(package_name)
 

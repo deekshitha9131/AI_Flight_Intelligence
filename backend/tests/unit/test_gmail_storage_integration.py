@@ -217,7 +217,9 @@ def _make_service(
     return service, thread_repository, email_repository
 
 
-async def test_sync_persists_through_repositories_only_no_bypass(monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_sync_persists_through_repositories_only_no_bypass(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """Confirms GmailService's only interaction with persistence is via
     ThreadRepository.upsert / EmailRepository.upsert — this is what
     "one sync workflow, correctly layered" actually verifies at the
@@ -256,7 +258,9 @@ async def test_synced_email_links_to_the_upserted_thread(monkeypatch: pytest.Mon
     assert email_repo.upsert_calls[0]["thread_id"] == stored_thread.id
 
 
-async def test_attachment_metadata_reaches_email_repository(monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_attachment_metadata_reaches_email_repository(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     user = _user()
     messages_by_id = {"m1": _raw_message("m1", "t1", with_attachment=True)}
     pages = [{"messages": [{"id": "m1", "threadId": "t1"}]}]
@@ -286,17 +290,27 @@ async def test_repeated_sync_calls_upsert_again_but_repository_dedupes(
     thread_repo = FakeThreadRepository()
     email_repo = FakeEmailRepository()
 
-    gmail_client_1 = FakeGmailClient(pages=[{"messages": [{"id": "m1", "threadId": "t1"}]}], messages_by_id=messages_by_id)
+    gmail_client_1 = FakeGmailClient(
+        pages=[{"messages": [{"id": "m1", "threadId": "t1"}]}], messages_by_id=messages_by_id
+    )
     service_1, _, _ = _make_service(
-        monkeypatch, gmail_client=gmail_client_1, oauth_token=_oauth_token(user.id),
-        thread_repository=thread_repo, email_repository=email_repo,
+        monkeypatch,
+        gmail_client=gmail_client_1,
+        oauth_token=_oauth_token(user.id),
+        thread_repository=thread_repo,
+        email_repository=email_repo,
     )
     await service_1.sync_mailbox(user)
 
-    gmail_client_2 = FakeGmailClient(pages=[{"messages": [{"id": "m1", "threadId": "t1"}]}], messages_by_id=messages_by_id)
+    gmail_client_2 = FakeGmailClient(
+        pages=[{"messages": [{"id": "m1", "threadId": "t1"}]}], messages_by_id=messages_by_id
+    )
     service_2, _, _ = _make_service(
-        monkeypatch, gmail_client=gmail_client_2, oauth_token=_oauth_token(user.id),
-        thread_repository=thread_repo, email_repository=email_repo,
+        monkeypatch,
+        gmail_client=gmail_client_2,
+        oauth_token=_oauth_token(user.id),
+        thread_repository=thread_repo,
+        email_repository=email_repo,
     )
     await service_2.sync_mailbox(user)
 
@@ -304,7 +318,9 @@ async def test_repeated_sync_calls_upsert_again_but_repository_dedupes(
     assert len(email_repo._emails) == 1  # but only one row stored
 
 
-async def test_sync_never_writes_records_for_a_different_user(monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_sync_never_writes_records_for_a_different_user(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """Every upsert call GmailService makes carries the user_id of the
     User it was invoked with — never a different one, and never
     omitted."""
@@ -314,17 +330,27 @@ async def test_sync_never_writes_records_for_a_different_user(monkeypatch: pytes
     thread_repo = FakeThreadRepository()
     email_repo = FakeEmailRepository()
 
-    gmail_client_a = FakeGmailClient(pages=[{"messages": [{"id": "m1", "threadId": "t1"}]}], messages_by_id=messages_by_id)
+    gmail_client_a = FakeGmailClient(
+        pages=[{"messages": [{"id": "m1", "threadId": "t1"}]}], messages_by_id=messages_by_id
+    )
     service_a, _, _ = _make_service(
-        monkeypatch, gmail_client=gmail_client_a, oauth_token=_oauth_token(user_a.id),
-        thread_repository=thread_repo, email_repository=email_repo,
+        monkeypatch,
+        gmail_client=gmail_client_a,
+        oauth_token=_oauth_token(user_a.id),
+        thread_repository=thread_repo,
+        email_repository=email_repo,
     )
     await service_a.sync_mailbox(user_a)
 
-    gmail_client_b = FakeGmailClient(pages=[{"messages": [{"id": "m1", "threadId": "t1"}]}], messages_by_id=messages_by_id)
+    gmail_client_b = FakeGmailClient(
+        pages=[{"messages": [{"id": "m1", "threadId": "t1"}]}], messages_by_id=messages_by_id
+    )
     service_b, _, _ = _make_service(
-        monkeypatch, gmail_client=gmail_client_b, oauth_token=_oauth_token(user_b.id),
-        thread_repository=thread_repo, email_repository=email_repo,
+        monkeypatch,
+        gmail_client=gmail_client_b,
+        oauth_token=_oauth_token(user_b.id),
+        thread_repository=thread_repo,
+        email_repository=email_repo,
     )
     await service_b.sync_mailbox(user_b)
 

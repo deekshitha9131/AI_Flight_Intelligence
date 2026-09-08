@@ -8,10 +8,10 @@ built correctly, not just that `send` was called.
 """
 
 import base64
+from datetime import UTC, datetime, timedelta
 from email import message_from_bytes
 from unittest.mock import MagicMock, patch
 from uuid import uuid4
-from datetime import UTC, datetime, timedelta
 
 import httplib2
 import pytest
@@ -108,13 +108,19 @@ async def test_send_new_message_with_both_bodies(
     assert message["Subject"] == "Project Update"
     assert message.is_multipart() is True
 
-    parts = {part.get_content_type(): part.get_payload(decode=True).decode("utf-8") for part in message.walk() if not part.is_multipart()}
+    parts = {
+        part.get_content_type(): part.get_payload(decode=True).decode("utf-8")
+        for part in message.walk()
+        if not part.is_multipart()
+    }
     assert "Hello, plain version." in parts["text/plain"]
     assert "<p>Hello, HTML version.</p>" in parts["text/html"]
 
 
 @patch("app.infrastructure.gmail.client.build")
-async def test_send_reply_includes_thread_id(mock_build: MagicMock, monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_send_reply_includes_thread_id(
+    mock_build: MagicMock, monkeypatch: pytest.MonkeyPatch
+) -> None:
     mock_service = MagicMock()
     mock_service.users.return_value.messages.return_value.send.return_value.execute.return_value = {
         "id": "sent-2",
@@ -147,7 +153,9 @@ async def test_send_plain_text_only_produces_single_part_message(
     mock_build.return_value = mock_service
 
     client = _client(monkeypatch)
-    await client.send_email(to=["bob@example.com"], subject="Plain only", body_text="Just plain text.")
+    await client.send_email(
+        to=["bob@example.com"], subject="Plain only", body_text="Just plain text."
+    )
 
     call_kwargs = mock_service.users.return_value.messages.return_value.send.call_args.kwargs
     mime_bytes = _decode_sent_raw(call_kwargs)
@@ -170,7 +178,9 @@ async def test_send_html_only_produces_single_part_message(
     mock_build.return_value = mock_service
 
     client = _client(monkeypatch)
-    await client.send_email(to=["bob@example.com"], subject="HTML only", body_html="<p>Just HTML.</p>")
+    await client.send_email(
+        to=["bob@example.com"], subject="HTML only", body_html="<p>Just HTML.</p>"
+    )
 
     call_kwargs = mock_service.users.return_value.messages.return_value.send.call_args.kwargs
     mime_bytes = _decode_sent_raw(call_kwargs)

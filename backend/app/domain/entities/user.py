@@ -26,7 +26,7 @@ class User:
         return self.deleted_at is not None
 
     def activate(self) -> None:
-        
+
         if self.is_deleted:
             raise BusinessValidationError(
                 "Cannot activate a deleted user.", code="CANNOT_ACTIVATE_DELETED_USER"
@@ -34,5 +34,5 @@ class User:
         self.status = UserStatus.ACTIVE
 
     def deactivate(self) -> None:
-       
+
         self.status = UserStatus.INACTIVE

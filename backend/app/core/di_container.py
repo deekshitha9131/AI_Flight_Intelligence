@@ -1,42 +1,67 @@
 from functools import lru_cache
 from typing import Annotated
-from app.application.services.gmail_service import GmailService
-from app.infrastructure.database.repositories.email_repository import EmailRepository
-from app.infrastructure.database.repositories.thread_repository import ThreadRepository
+
 import httpx
 import redis.asyncio as redis
 from fastapi import Depends, Request
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.application.services.email_service import EmailService
+
+from app.ai.preprocessing.email_preprocessor import EmailPreprocessor
+from app.ai.providers.llm_provider import LLMProvider
+from app.ai.rag.chunker import EmailChunker
+from app.ai.rag.embedding import EmbeddingService
+from app.ai.rag.indexing_service import EmailIndexingService
+from app.ai.rag.retrieval import RetrievalService
+from app.ai.services.understanding_service import AIUnderstandingService
 from app.application.services.auth_service import AuthService
+from app.application.services.email_service import EmailService
+from app.application.services.gmail_service import GmailService
+from app.application.services.thread_service import ThreadService
 from app.core.config import Settings, get_settings
 from app.core.constants import SESSION_COOKIE_NAME
 from app.core.security import TokenCipher
 from app.domain.entities.user import User
+from app.domain.exceptions.auth import SessionNotFoundError
 from app.infrastructure.cache.session_store import SessionStore
+from app.infrastructure.database.repositories.email_ai_understanding_repository import (
+    EmailAIUnderstandingRepository,
+)
+
+from app.ai.rag.context_builder import ContextBuilder as RAGContextBuilder
+from app.ai.context.draft_context import DraftContextBuilder
+from app.application.services.draft_service import DraftService
+from app.infrastructure.database.repositories.email_ai_understanding_repository import (
+    EmailAIUnderstandingRepository,
+)
+
+from app.ai.services.draft_generator import DraftGenerator
+from app.infrastructure.database.repositories.email_chunk_repository import EmailChunkRepository
+from app.infrastructure.database.repositories.email_repository import EmailRepository
+from app.infrastructure.database.repositories.thread_repository import ThreadRepository
 from app.infrastructure.database.repositories.user_repository import UserRepository
 from app.infrastructure.database.session import get_db_session
 from app.infrastructure.gmail.oauth_client import GoogleOAuthClient
-from app.domain.exceptions.auth import SessionNotFoundError
+from app.infrastructure.database.repositories.draft_repository import DraftRepository
 
-def get_redis(request: Request) -> redis.Redis:  # type: ignore[type-arg]
-    
+
+def get_redis(request: Request) -> redis.Redis:
+
     return request.app.state.redis_client  # type: ignore[no-any-return]
 
 
 def get_http_client(request: Request) -> httpx.AsyncClient:
-    
+
     return request.app.state.http_client  # type: ignore[no-any-return]
 
 
 def get_settings_dependency() -> Settings:
-    
+
     return get_settings()
 
 
 @lru_cache
 def get_token_cipher() -> TokenCipher:
-    
+
     return TokenCipher(get_settings())
 
 
@@ -46,6 +71,10 @@ def get_user_repository(
 ) -> UserRepository:
     return UserRepository(db, token_cipher)
 
+def get_draft_repository(
+    db: Annotated[AsyncSession, Depends(get_db_session)],
+) -> DraftRepository:
+    return DraftRepository(db)
 
 def get_oauth_client(
     settings: Annotated[Settings, Depends(get_settings_dependency)],
@@ -60,7 +89,7 @@ def get_oauth_client(
 
 
 def get_session_store(
-    redis_client: Annotated[redis.Redis, Depends(get_redis)],  # type: ignore[type-arg]
+    redis_client: Annotated[redis.Redis, Depends(get_redis)],
     settings: Annotated[Settings, Depends(get_settings_dependency)],
 ) -> SessionStore:
     return SessionStore(redis_client=redis_client, ttl_seconds=settings.session_ttl_seconds)
@@ -78,7 +107,7 @@ def get_auth_service(
     )
 
 
-async def get_current_user(request: Request) -> User:   
+async def get_current_user(request: Request) -> User:
     session_id = request.cookies.get(SESSION_COOKIE_NAME)
     if session_id is None:
         raise SessionNotFoundError("No active session.")
@@ -100,6 +129,7 @@ RedisClient = Annotated[redis.Redis, Depends(get_redis)]
 AppSettings = Annotated[Settings, Depends(get_settings_dependency)]
 CurrentUser = Annotated[User, Depends(get_current_user)]
 
+
 def get_thread_repository(
     db: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> ThreadRepository:
@@ -118,7 +148,7 @@ def get_gmail_service(
     email_repository: Annotated[EmailRepository, Depends(get_email_repository)],
     settings: Annotated[Settings, Depends(get_settings_dependency)],
 ) -> GmailService:
-    
+
     return GmailService(
         user_repository=user_repository,
         thread_repository=thread_repository,
@@ -132,15 +162,106 @@ def get_email_service(
 ) -> EmailService:
     return EmailService(email_repository=email_repository)
 
-# --- additional import, merged into the existing import block ---
-from app.application.services.thread_service import ThreadService
-
-
-# --- additional provider, added after get_email_service ---
-# (get_thread_repository already exists from Task 3.3 — reused as-is)
-
 
 def get_thread_service(
     thread_repository: Annotated[ThreadRepository, Depends(get_thread_repository)],
 ) -> ThreadService:
     return ThreadService(thread_repository=thread_repository)
+
+
+def get_email_preprocessor() -> EmailPreprocessor:
+    return EmailPreprocessor()
+
+
+def get_llm_provider(
+    settings: Annotated[Settings, Depends(get_settings_dependency)],
+) -> LLMProvider:
+    return LLMProvider(settings)
+
+
+def get_understanding_service(
+    preprocessor: Annotated[EmailPreprocessor, Depends(get_email_preprocessor)],
+    llm_provider: Annotated[LLMProvider, Depends(get_llm_provider)],
+) -> AIUnderstandingService:
+    return AIUnderstandingService(preprocessor=preprocessor, llm_provider=llm_provider)
+
+
+def get_email_ai_understanding_repository(
+    db: Annotated[AsyncSession, Depends(get_db_session)],
+) -> EmailAIUnderstandingRepository:
+    return EmailAIUnderstandingRepository(db)
+
+
+def get_email_chunker() -> EmailChunker:
+    return EmailChunker()
+
+
+def get_embedding_service(
+    settings: Annotated[Settings, Depends(get_settings_dependency)],
+) -> EmbeddingService:
+    return EmbeddingService(settings)
+
+
+def get_email_chunk_repository(
+    db: Annotated[AsyncSession, Depends(get_db_session)],
+) -> EmailChunkRepository:
+    return EmailChunkRepository(db)
+
+
+def get_email_indexing_service(
+    preprocessor: Annotated[EmailPreprocessor, Depends(get_email_preprocessor)],
+    chunker: Annotated[EmailChunker, Depends(get_email_chunker)],
+    embedding_service: Annotated[EmbeddingService, Depends(get_embedding_service)],
+    chunk_repository: Annotated[EmailChunkRepository, Depends(get_email_chunk_repository)],
+) -> EmailIndexingService:
+    return EmailIndexingService(
+        preprocessor=preprocessor,
+        chunker=chunker,
+        embedding_service=embedding_service,
+        chunk_repository=chunk_repository,
+    )
+
+
+def get_retrieval_service(
+    embedding_service: Annotated[EmbeddingService, Depends(get_embedding_service)],
+    chunk_repository: Annotated[EmailChunkRepository, Depends(get_email_chunk_repository)],
+) -> RetrievalService:
+    return RetrievalService(embedding_service=embedding_service, chunk_repository=chunk_repository)
+
+def get_draft_generator(
+    llm_provider: Annotated[LLMProvider, Depends(get_llm_provider)],
+    settings: Annotated[Settings, Depends(get_settings_dependency)],
+) -> DraftGenerator:
+    return DraftGenerator(llm_provider=llm_provider, settings=settings)
+
+def get_email_ai_understanding_repository(
+    db: Annotated[AsyncSession, Depends(get_db_session)],
+) -> EmailAIUnderstandingRepository:
+    return EmailAIUnderstandingRepository(db)
+
+def get_rag_context_builder() -> RAGContextBuilder:
+    return RAGContextBuilder()
+
+def get_draft_context_builder() -> DraftContextBuilder:
+    return DraftContextBuilder()
+
+def get_draft_service(
+    email_service: Annotated[EmailService, Depends(get_email_service)],
+    understanding_repository: Annotated[
+        EmailAIUnderstandingRepository, Depends(get_email_ai_understanding_repository)
+    ],
+    retrieval_service: Annotated[RetrievalService, Depends(get_retrieval_service)],
+    rag_context_builder: Annotated[RAGContextBuilder, Depends(get_rag_context_builder)],
+    draft_context_builder: Annotated[DraftContextBuilder, Depends(get_draft_context_builder)],
+    draft_generator: Annotated[DraftGenerator, Depends(get_draft_generator)],
+    draft_repository: Annotated[DraftRepository, Depends(get_draft_repository)],
+) -> DraftService:
+    return DraftService(
+        email_service=email_service,
+        understanding_repository=understanding_repository,
+        retrieval_service=retrieval_service,
+        rag_context_builder=rag_context_builder,
+        draft_context_builder=draft_context_builder,
+        draft_generator=draft_generator,
+        draft_repository=draft_repository,
+    )

@@ -19,7 +19,9 @@ SortOrder = Literal["newest", "oldest"]
 
 
 class IThreadRepository(Protocol):
-    async def get_by_gmail_thread_id(self, user_id: UUID, gmail_thread_id: str) -> Thread | None: ...
+    async def get_by_gmail_thread_id(
+        self, user_id: UUID, gmail_thread_id: str
+    ) -> Thread | None: ...
 
     async def upsert(
         self,

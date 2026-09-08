@@ -1,7 +1,8 @@
 import uuid
 from datetime import UTC, datetime, timedelta
-import pytest_asyncio
+
 import pytest
+import pytest_asyncio
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 
@@ -136,7 +137,9 @@ async def test_get_by_id_returns_thread_for_owner(
     assert fetched.id == thread_id
 
 
-async def test_get_by_id_returns_none_for_nonexistent_thread(repo: ThreadRepository, user_id) -> None:
+async def test_get_by_id_returns_none_for_nonexistent_thread(
+    repo: ThreadRepository, user_id
+) -> None:
     assert await repo.get_by_id(uuid.uuid4(), user_id) is None
 
 
@@ -161,7 +164,10 @@ async def test_get_by_id_returns_none_for_another_users_thread(
 async def test_list_by_user_paginates(repo: ThreadRepository, session_factory, user_id) -> None:
     for i in range(5):
         await _create_thread(
-            session_factory, user_id, subject=f"Thread {i}", updated_at=_BASE_TIME + timedelta(hours=i)
+            session_factory,
+            user_id,
+            subject=f"Thread {i}",
+            updated_at=_BASE_TIME + timedelta(hours=i),
         )
 
     page_1 = await repo.list_by_user(user_id, page=1, page_size=2, sort="newest")
@@ -171,10 +177,15 @@ async def test_list_by_user_paginates(repo: ThreadRepository, session_factory, u
     assert [t.subject for t in page_2] == ["Thread 2", "Thread 1"]
 
 
-async def test_list_by_user_sorts_oldest_first(repo: ThreadRepository, session_factory, user_id) -> None:
+async def test_list_by_user_sorts_oldest_first(
+    repo: ThreadRepository, session_factory, user_id
+) -> None:
     for i in range(3):
         await _create_thread(
-            session_factory, user_id, subject=f"Thread {i}", updated_at=_BASE_TIME + timedelta(hours=i)
+            session_factory,
+            user_id,
+            subject=f"Thread {i}",
+            updated_at=_BASE_TIME + timedelta(hours=i),
         )
 
     results = await repo.list_by_user(user_id, sort="oldest")
@@ -227,14 +238,18 @@ async def test_list_by_user_only_returns_this_users_threads(
 # ---------------------------------------------------------------------------
 
 
-async def test_count_by_user_reflects_thread_count(repo: ThreadRepository, session_factory, user_id) -> None:
-    for i in range(4):
+async def test_count_by_user_reflects_thread_count(
+    repo: ThreadRepository, session_factory, user_id
+) -> None:
+    for _ in range(4):
         await _create_thread(session_factory, user_id, updated_at=_BASE_TIME)
 
     assert await repo.count_by_user(user_id) == 4
 
 
-async def test_count_by_user_is_zero_for_user_with_no_threads(repo: ThreadRepository, user_id) -> None:
+async def test_count_by_user_is_zero_for_user_with_no_threads(
+    repo: ThreadRepository, user_id
+) -> None:
     assert await repo.count_by_user(user_id) == 0
 
 
@@ -273,10 +288,18 @@ async def test_get_thread_emails_only_returns_this_threads_emails(
     thread_a = await _create_thread(session_factory, user_id, updated_at=_BASE_TIME)
     thread_b = await _create_thread(session_factory, user_id, updated_at=_BASE_TIME)
     await _create_email(
-        session_factory, thread_id=thread_a, user_id=user_id, gmail_message_id="a1", received_at=_BASE_TIME
+        session_factory,
+        thread_id=thread_a,
+        user_id=user_id,
+        gmail_message_id="a1",
+        received_at=_BASE_TIME,
     )
     await _create_email(
-        session_factory, thread_id=thread_b, user_id=user_id, gmail_message_id="b1", received_at=_BASE_TIME
+        session_factory,
+        thread_id=thread_b,
+        user_id=user_id,
+        gmail_message_id="b1",
+        received_at=_BASE_TIME,
     )
 
     emails = await repo.get_thread_emails(thread_a, user_id)
@@ -305,7 +328,11 @@ async def test_get_thread_emails_enforces_user_isolation(
     user_b = await _create_user(session_factory)
     thread_a = await _create_thread(session_factory, user_a, updated_at=_BASE_TIME)
     await _create_email(
-        session_factory, thread_id=thread_a, user_id=user_a, gmail_message_id="a1", received_at=_BASE_TIME
+        session_factory,
+        thread_id=thread_a,
+        user_id=user_a,
+        gmail_message_id="a1",
+        received_at=_BASE_TIME,
     )
 
     # A different user querying thread_a's emails with their own user_id

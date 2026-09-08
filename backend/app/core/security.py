@@ -17,9 +17,7 @@ def _derive_fernet_key(secret: str) -> bytes:
 
 class TokenCipher:
     def __init__(self, settings: Settings) -> None:
-        self._fernet = Fernet(
-            _derive_fernet_key(settings.token_encryption_key)
-        )
+        self._fernet = Fernet(_derive_fernet_key(settings.token_encryption_key))
 
     def encrypt(self, plaintext: str) -> bytes:
         return self._fernet.encrypt(plaintext.encode("utf-8"))
@@ -32,4 +30,3 @@ class TokenCipher:
                 "Failed to decrypt token — ciphertext is invalid, was tampered "
                 "with, or was encrypted under a different TOKEN_ENCRYPTION_KEY."
             ) from exc
-

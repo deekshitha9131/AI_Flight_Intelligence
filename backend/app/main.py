@@ -25,7 +25,6 @@ from app.domain.exceptions import DomainError
 from app.infrastructure.cache.redis_client import close_redis_client, create_redis_client
 from app.infrastructure.database.engine import create_db_engine, dispose_engine
 from app.infrastructure.database.session import create_session_factory
-from app.infrastructure.vector.extension import ensure_pgvector_extension
 from app.presentation.api.v1.router import api_router
 from app.presentation.exception_handlers import (
     domain_error_handler,
@@ -103,6 +102,7 @@ def create_app() -> FastAPI:
         return {"status": HEALTH_STATUS_OK}
 
     return app
+
 
 app = create_app()
 

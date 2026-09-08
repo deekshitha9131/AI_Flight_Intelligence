@@ -218,7 +218,10 @@ async def test_sync_incremental_requires_prior_history_id(monkeypatch: pytest.Mo
     user = _user()
     gmail_client = FakeGmailClient(history_pages=[], messages_by_id={})
     service, _, _ = _make_service(
-        monkeypatch, gmail_client=gmail_client, oauth_token=_oauth_token(user.id), gmail_history_id=None
+        monkeypatch,
+        gmail_client=gmail_client,
+        oauth_token=_oauth_token(user.id),
+        gmail_history_id=None,
     )
 
     with pytest.raises(GmailSyncRequiredError):
@@ -239,7 +242,10 @@ async def test_sync_incremental_success(monkeypatch: pytest.MonkeyPatch) -> None
     ]
     gmail_client = FakeGmailClient(history_pages=history_pages, messages_by_id=messages_by_id)
     service, user_repo, email_repo = _make_service(
-        monkeypatch, gmail_client=gmail_client, oauth_token=_oauth_token(user.id), gmail_history_id="100"
+        monkeypatch,
+        gmail_client=gmail_client,
+        oauth_token=_oauth_token(user.id),
+        gmail_history_id="100",
     )
 
     summary = await service.sync_incremental(user)
@@ -259,7 +265,10 @@ async def test_sync_incremental_with_no_changes(monkeypatch: pytest.MonkeyPatch)
     history_pages = [{"history": [], "historyId": "101"}]
     gmail_client = FakeGmailClient(history_pages=history_pages, messages_by_id={})
     service, user_repo, email_repo = _make_service(
-        monkeypatch, gmail_client=gmail_client, oauth_token=_oauth_token(user.id), gmail_history_id="100"
+        monkeypatch,
+        gmail_client=gmail_client,
+        oauth_token=_oauth_token(user.id),
+        gmail_history_id="100",
     )
 
     summary = await service.sync_incremental(user)
@@ -293,7 +302,10 @@ async def test_sync_incremental_deduplicates_message_ids_across_history_keys(
     ]
     gmail_client = FakeGmailClient(history_pages=history_pages, messages_by_id=messages_by_id)
     service, _, email_repo = _make_service(
-        monkeypatch, gmail_client=gmail_client, oauth_token=_oauth_token(user.id), gmail_history_id="100"
+        monkeypatch,
+        gmail_client=gmail_client,
+        oauth_token=_oauth_token(user.id),
+        gmail_history_id="100",
     )
 
     summary = await service.sync_incremental(user)
@@ -302,12 +314,17 @@ async def test_sync_incremental_deduplicates_message_ids_across_history_keys(
     assert email_repo.upsert_calls == 1
 
 
-async def test_sync_incremental_propagates_gmail_api_failure(monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_sync_incremental_propagates_gmail_api_failure(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     user = _user()
     gmail_client = FakeGmailClient(history_pages=[], messages_by_id={})
     gmail_client.raise_on_list_history = GmailAPIError("Gmail returned a 500.")
     service, _, _ = _make_service(
-        monkeypatch, gmail_client=gmail_client, oauth_token=_oauth_token(user.id), gmail_history_id="100"
+        monkeypatch,
+        gmail_client=gmail_client,
+        oauth_token=_oauth_token(user.id),
+        gmail_history_id="100",
     )
 
     with pytest.raises(GmailAPIError):
@@ -328,7 +345,10 @@ async def test_sync_incremental_run_twice_with_no_new_changes_second_time(
     # First run: one real change.
     gmail_client_1 = FakeGmailClient(
         history_pages=[
-            {"history": [{"messagesAdded": [{"message": {"id": "m1", "threadId": "t1"}}]}], "historyId": "200"}
+            {
+                "history": [{"messagesAdded": [{"message": {"id": "m1", "threadId": "t1"}}]}],
+                "historyId": "200",
+            }
         ],
         messages_by_id=messages_by_id,
     )
@@ -380,7 +400,10 @@ async def test_sync_incremental_follows_pagination(monkeypatch: pytest.MonkeyPat
     ]
     gmail_client = FakeGmailClient(history_pages=history_pages, messages_by_id=messages_by_id)
     service, _, email_repo = _make_service(
-        monkeypatch, gmail_client=gmail_client, oauth_token=_oauth_token(user.id), gmail_history_id="100"
+        monkeypatch,
+        gmail_client=gmail_client,
+        oauth_token=_oauth_token(user.id),
+        gmail_history_id="100",
     )
 
     summary = await service.sync_incremental(user)

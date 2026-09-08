@@ -1,3 +1,4 @@
+from typing import TYPE_CHECKING
 from uuid import UUID
 
 from sqlalchemy import ForeignKey, Integer, String, UniqueConstraint
@@ -5,6 +6,9 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.infrastructure.database.base import Base
 from app.infrastructure.database.mixins import UUIDPrimaryKeyMixin
+
+if TYPE_CHECKING:
+    from app.infrastructure.database.models.email import EmailModel
 
 
 class AttachmentModel(Base, UUIDPrimaryKeyMixin):

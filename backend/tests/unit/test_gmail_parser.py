@@ -305,7 +305,11 @@ def test_missing_message_id_raises_parse_error(parser: EmailParser) -> None:
     raw_message = {
         "threadId": "thread-9",
         "internalDate": "1735689600000",
-        "payload": {"mimeType": "text/plain", "headers": _headers(From="jane@example.com"), "body": {}},
+        "payload": {
+            "mimeType": "text/plain",
+            "headers": _headers(From="jane@example.com"),
+            "body": {},
+        },
     }
 
     with pytest.raises(GmailParseError):
@@ -316,7 +320,11 @@ def test_missing_thread_id_raises_parse_error(parser: EmailParser) -> None:
     raw_message = {
         "id": "msg-10",
         "internalDate": "1735689600000",
-        "payload": {"mimeType": "text/plain", "headers": _headers(From="jane@example.com"), "body": {}},
+        "payload": {
+            "mimeType": "text/plain",
+            "headers": _headers(From="jane@example.com"),
+            "body": {},
+        },
     }
 
     with pytest.raises(GmailParseError):

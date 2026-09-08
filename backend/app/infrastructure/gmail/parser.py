@@ -57,7 +57,9 @@ def _parse_internal_date(raw_message: dict[str, Any]) -> datetime:
     try:
         epoch_ms = int(raw_value)
     except (TypeError, ValueError) as exc:
-        raise GmailParseError(f"Gmail message has a non-numeric internalDate: {raw_value!r}") from exc
+        raise GmailParseError(
+            f"Gmail message has a non-numeric internalDate: {raw_value!r}"
+        ) from exc
     return datetime.fromtimestamp(epoch_ms / 1000, tz=UTC)
 
 
@@ -105,7 +107,6 @@ def _walk_part(
 
 
 class EmailParser:
-
 
     def parse_message(self, raw_message: dict[str, Any]) -> ParsedEmail:
 

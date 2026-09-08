@@ -1,15 +1,4 @@
-"""Email repository interface.
-
-Owns both `emails` and `attachments` — attachments have no independent
-existence from their parent email, same reasoning IUserRepository uses
-for owning `oauth_tokens`. Extended across Phase 4: Task 4.1 added the
-general CRUD/listing/count surface, Task 4.2 added `count_by_user_id`,
-Task 4.3 adds `search_by_user_id`/`count_search_by_user_id` — simple
-ILIKE-based text search across sender/subject/snippet/body_text,
-scoped to the authenticated user at the query level (never filtered in
-Python), per this project's explicit "no fetch-then-filter" rule.
-"""
-
+from datetime import datetime
 from typing import Literal, Protocol
 from uuid import UUID
 
@@ -20,20 +9,15 @@ SortOrder = Literal["newest", "oldest"]
 
 
 class IEmailRepository(Protocol):
-    # ------------------------------------------------------------------
-    # Retrieval
-    # ------------------------------------------------------------------
-
     async def get_by_id(self, email_id: UUID) -> Email | None:
         """Look up a single email by its database primary key."""
         ...
 
-    async def get_by_gmail_message_id(self, user_id: UUID, gmail_message_id: str) -> Email | None: ...
+    async def get_by_gmail_message_id(
+        self, user_id: UUID, gmail_message_id: str
+    ) -> Email | None: ...
 
     async def get_by_gmail_thread_id(self, user_id: UUID, gmail_thread_id: str) -> list[Email]:
-        """Return every locally stored email belonging to a Gmail thread,
-        oldest first."""
-        ...
 
     async def get_by_user_id(
         self,
@@ -89,7 +73,7 @@ class IEmailRepository(Protocol):
         gmail_message_id: str,
         sender: str,
         recipients: list[str],
-        received_at,
+        received_at: datetime,
         cc: list[str] | None = None,
         bcc: list[str] | None = None,
         subject: str | None = None,

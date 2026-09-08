@@ -10,7 +10,8 @@ from app.infrastructure.database.session import create_session_factory
 
 _engine: AsyncEngine | None = None
 _session_factory: async_sessionmaker[AsyncSession] | None = None
-_redis_client: redis.Redis | None = None  # type: ignore[type-arg]
+_redis_client: redis.Redis | None = None
+_loop: asyncio.AbstractEventLoop | None = None
 
 
 def init_worker_resources(settings: Settings) -> None:
@@ -53,6 +54,7 @@ def dispose_worker_resources() -> None:
         _loop.close()
         _loop = None
 
+
 def get_worker_loop() -> asyncio.AbstractEventLoop:
     """Return this process's single persistent event loop.
 
@@ -72,6 +74,7 @@ def get_worker_loop() -> asyncio.AbstractEventLoop:
         )
     return _loop
 
+
 def get_session_factory() -> async_sessionmaker[AsyncSession]:
     """Return this process's session factory.
 
@@ -89,7 +92,7 @@ def get_session_factory() -> async_sessionmaker[AsyncSession]:
     return _session_factory
 
 
-def get_redis_client() -> redis.Redis:  # type: ignore[type-arg]
+def get_redis_client() -> redis.Redis:
     """Return this process's Redis client. See `get_session_factory` for the failure mode."""
     if _redis_client is None:
         raise RuntimeError(
@@ -98,4 +101,3 @@ def get_redis_client() -> redis.Redis:  # type: ignore[type-arg]
             "completed, which indicates a startup-ordering bug."
         )
     return _redis_client
-init_worker_resources

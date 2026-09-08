@@ -1,5 +1,4 @@
 class DomainError(Exception):
-   
 
     code: str = "DOMAIN_ERROR"
     http_status: int = 400
@@ -12,33 +11,30 @@ class DomainError(Exception):
 
 
 class NotFoundError(DomainError):
-   
+
     code = "NOT_FOUND"
     http_status = 404
 
 
 class ConflictError(DomainError):
-    
 
     code = "CONFLICT"
     http_status = 409
 
 
 class BusinessValidationError(DomainError):
-   
 
     code = "BUSINESS_VALIDATION_ERROR"
     http_status = 422
 
 
 class UnauthorizedError(DomainError):
-   
+
     code = "UNAUTHORIZED"
     http_status = 401
 
 
 class ForbiddenError(DomainError):
-    
 
     code = "FORBIDDEN"
     http_status = 403

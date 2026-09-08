@@ -8,13 +8,14 @@ GmailSendRequest.
 """
 
 from datetime import UTC, datetime
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from app.core.di_container import get_current_user, get_email_service
+from app.ai.rag.indexing_service import EmailIndexingService
+from app.core.di_container import get_current_user, get_email_service, get_email_indexing_service
 from app.domain.entities.email import Email
 from app.domain.entities.user import User
 from app.domain.enums.user_status import UserStatus
@@ -79,11 +80,31 @@ class FakeEmailService:
         return self.email_to_return
 
 
+class FakeEmailIndexingService:
+    def __init__(self, chunk_count_to_return: int = 2, raise_error: Exception | None = None) -> None:
+        self._chunk_count_to_return = chunk_count_to_return
+        self._raise_error = raise_error
+        self.index_email_calls: list[Email] = []
+
+    async def index_email(self, email: Email) -> int:
+        self.index_email_calls.append(email)
+        if self._raise_error is not None:
+            raise self._raise_error
+        return self._chunk_count_to_return
+
+
 @pytest.fixture
 def fake_email_service(app_no_lifespan: FastAPI) -> FakeEmailService:
     service = FakeEmailService()
     app_no_lifespan.dependency_overrides[get_email_service] = lambda: service
     app_no_lifespan.dependency_overrides[get_current_user] = _fake_current_user
+    return service
+
+
+@pytest.fixture
+def fake_indexing_service(app_no_lifespan: FastAPI) -> FakeEmailIndexingService:
+    service = FakeEmailIndexingService()
+    app_no_lifespan.dependency_overrides[get_email_indexing_service] = lambda: service
     return service
 
 
@@ -151,7 +172,9 @@ def test_list_emails_rejects_page_size_above_max(
     assert response.status_code == 400
 
 
-def test_list_emails_requires_authentication(app_no_lifespan: FastAPI, unit_client: TestClient) -> None:
+def test_list_emails_requires_authentication(
+    app_no_lifespan: FastAPI, unit_client: TestClient
+) -> None:
     service = FakeEmailService()
     app_no_lifespan.dependency_overrides[get_email_service] = lambda: service
 
@@ -199,9 +222,12 @@ def test_get_email_returns_404_for_another_users_email(
     response = unit_client.get(f"/api/v1/emails/{uuid4()}")
 
     assert response.status_code == 404
+    assert response.json()["error"]["code"] == "EMAIL_NOT_FOUND"
 
 
-def test_get_email_requires_authentication(app_no_lifespan: FastAPI, unit_client: TestClient) -> None:
+def test_get_email_requires_authentication(
+    app_no_lifespan: FastAPI, unit_client: TestClient
+) -> None:
     service = FakeEmailService()
     app_no_lifespan.dependency_overrides[get_email_service] = lambda: service
 
@@ -216,3 +242,111 @@ def test_get_email_rejects_non_uuid_path_param(
     response = unit_client.get("/api/v1/emails/not-a-uuid")
 
     assert response.status_code == 400
+
+
+def test_index_email_returns_chunk_count(
+    app_no_lifespan: FastAPI, unit_client: TestClient, fake_email_service: FakeEmailService, fake_indexing_service: FakeEmailIndexingService
+) -> None:
+    user_id = uuid4()
+    email_id = uuid4()
+    email = _email(user_id=user_id, email_id=email_id, subject="Index me")
+    fake_email_service.email_to_return = email
+
+    # Set the fake indexing service to return 3 chunks
+    fake_indexing_service._chunk_count_to_return = 3
+
+    response = unit_client.post(f"/api/v1/emails/{email_id}/index")
+
+    assert response.status_code == 200
+    assert response.json() == 3
+
+    # Verify that the email service was called with the correct user and email ID
+    assert fake_email_service.get_calls == [email_id]
+
+    # Verify that the indexing service was called with the correct email
+    assert len(fake_indexing_service.index_email_calls) == 1
+    assert fake_indexing_service.index_email_calls[0].id == email_id
+    assert fake_indexing_service.index_email_calls[0].subject == "Index me"
+
+
+def test_index_email_returns_404_when_email_not_found(
+    app_no_lifespan: FastAPI, unit_client: TestClient, fake_email_service: FakeEmailService, fake_indexing_service: FakeEmailIndexingService
+) -> None:
+    fake_email_service.raise_on_get = EmailNotFoundError("No email found.")
+
+    response = unit_client.post(f"/api/v1/emails/{uuid4()}/index")
+
+    assert response.status_code == 404
+    assert response.json()["error"]["code"] == "EMAIL_NOT_FOUND"
+
+    # Verify that the indexing service was not called
+    assert len(fake_indexing_service.index_email_calls) == 0
+
+
+def test_index_email_returns_404_when_email_belongs_to_another_user(
+    app_no_lifespan: FastAPI, unit_client: TestClient, fake_email_service: FakeEmailService, fake_indexing_service: FakeEmailIndexingService
+) -> None:
+    # Create two different users
+    user_a_id = uuid4()
+    user_b_id = uuid4()
+
+    # Create an email that belongs to user A
+    email_id = uuid4()
+    email = _email(user_id=user_a_id, email_id=email_id, subject="User A's email")
+    fake_email_service.email_to_return = email
+
+    # Set up the fake email service to raise EmailNotFoundError when
+    # user B tries to access user A's email (simulating ownership check)
+    def mock_get_email(user, email_id):
+        if user.id != user_a_id:
+            raise EmailNotFoundError("No email found.")
+        return email
+
+    fake_email_service.get_email = mock_get_email
+
+    # Override current user to be user B
+    app_no_lifespan.dependency_overrides[get_current_user] = lambda: User(
+        id=user_b_id,
+        email="userb@example.com",
+        full_name="User B",
+        google_sub_id="sub-2",
+        status=UserStatus.ACTIVE,
+        created_at=datetime.now(UTC),
+        updated_at=datetime.now(UTC),
+    )
+
+    response = unit_client.post(f"/api/v1/emails/{email_id}/index")
+
+    assert response.status_code == 404
+    assert response.json()["error"]["code"] == "EMAIL_NOT_FOUND"
+
+    # Verify that the indexing service was not called
+    assert len(fake_indexing_service.index_email_calls) == 0
+
+    # Clean up the override
+    app_no_lifespan.dependency_overrides[get_current_user] = _fake_current_user
+
+
+def test_index_email_propagates_indexing_service_error(
+    app_no_lifespan: FastAPI, unit_client: TestClient, fake_email_service: FakeEmailService, fake_indexing_service: FakeEmailIndexingService
+) -> None:
+    user_id = uuid4()
+    email_id = uuid4()
+    email = _email(user_id=user_id, email_id=email_id, subject="Index me")
+    fake_email_service.email_to_return = email
+
+    # Set the fake indexing service to raise an error
+    fake_indexing_service._raise_error = RuntimeError("Indexing failed")
+
+    response = unit_client.post(f"/api/v1/emails/{email_id}/index")
+
+    assert response.status_code == 500  # Internal server error
+    # Note: The exact error handling depends on how the exception is handled in the endpoint.
+    # Since the endpoint does not catch exceptions from the indexing service, it will propagate as a 500.
+
+    # Verify that the email service was called
+    assert fake_email_service.get_calls == [email_id]
+
+    # Verify that the indexing service was called
+    assert len(fake_indexing_service.index_email_calls) == 1
+    assert fake_indexing_service.index_email_calls[0].id == email_id

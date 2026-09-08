@@ -1,8 +1,8 @@
 from uuid import UUID
 
 from sqlalchemy import func, select
-from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.application.dto.thread import ThreadSummary
 from app.domain.entities.email import Email
@@ -29,7 +29,7 @@ def _to_entity(model: ThreadModel) -> Thread:
 
 
 class ThreadRepository:
-    
+
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
 
@@ -75,11 +75,11 @@ class ThreadRepository:
         await self._session.refresh(model)
         return _to_entity(model)
 
-   
-
     async def get_by_id(self, thread_id: UUID, user_id: UUID) -> Thread | None:
-        
-        stmt = select(ThreadModel).where(ThreadModel.id == thread_id, ThreadModel.user_id == user_id)
+
+        stmt = select(ThreadModel).where(
+            ThreadModel.id == thread_id, ThreadModel.user_id == user_id
+        )
         result = await self._session.execute(stmt)
         model = result.scalar_one_or_none()
         return _to_entity(model) if model is not None else None
@@ -87,7 +87,7 @@ class ThreadRepository:
     async def list_by_user(
         self, user_id: UUID, *, page: int = 1, page_size: int = 25, sort: SortOrder = "newest"
     ) -> list[ThreadSummary]:
-       
+
         if page < 1:
             raise ValueError(f"page must be >= 1, got {page}")
         if page_size < 1:
@@ -130,7 +130,7 @@ class ThreadRepository:
         return result.scalar_one()
 
     async def get_thread_emails(self, thread_id: UUID, user_id: UUID) -> list[Email]:
-       
+
         stmt = (
             select(EmailModel)
             .options(selectinload(EmailModel.attachments))

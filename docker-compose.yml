@@ -88,77 +88,83 @@ services:
       retries: 3
       start_period: 20s
 
-  worker-classification:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-      target: ${BUILD_TARGET:-development}
-    container_name: ${COMPOSE_PROJECT_NAME:-ai-email-assistant}-worker-classification
-    restart: unless-stopped
-    command: celery -A app.core.celery_app worker -Q classification -c 2 --loglevel=info -n classification@%h
-    env_file:
-      - ./backend/.env
-    networks:
-      - app_network
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD-SHELL", "celery -A app.core.celery_app inspect ping -d classification@$$HOSTNAME || exit 1"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 20s
+  # worker-classification:
+  #   build:
+  #     context: ./backend
+  #     dockerfile: Dockerfile
+  #     target: ${BUILD_TARGET:-development}
+  #   container_name: ${COMPOSE_PROJECT_NAME:-ai-email-assistant}-worker-classification
+  #   restart: unless-stopped
+  #   command: celery -A app.core.celery_app worker -Q classification -c 2 --loglevel=info -n classification@%h
+  #   env_file:
+  #     - ./backend/.env
+  #   networks:
+  #     - app_network
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
+  #     redis:
+  #       condition: service_healthy
+  #   healthcheck:
+  #     test: ["CMD-SHELL", "celery -A app.core.celery_app inspect ping -d classification@$$HOSTNAME || exit 1"]
+  #     interval: 30s
+  #     timeout: 10s
+  #     retries: 3
+  #     start_period: 20s
+  #   # Temporarily commented out - no actual tasks implemented for classification queue yet
+  #   # Uncomment when classification tasks are added
 
-  worker-ai:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-      target: ${BUILD_TARGET:-development}
-    container_name: ${COMPOSE_PROJECT_NAME:-ai-email-assistant}-worker-ai
-    restart: unless-stopped
-    command: celery -A app.core.celery_app worker -Q ai_orchestration -c 1 --loglevel=info -n ai@%h
-    env_file:
-      - ./backend/.env
-    networks:
-      - app_network
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD-SHELL", "celery -A app.core.celery_app inspect ping -d ai@$$HOSTNAME || exit 1"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 20s
+  # worker-ai:
+  #   build:
+  #     context: ./backend
+  #     dockerfile: Dockerfile
+  #     target: ${BUILD_TARGET:-development}
+  #   container_name: ${COMPOSE_PROJECT_NAME:-ai-email-assistant}-worker-ai
+  #   restart: unless-stopped
+  #   command: celery -A app.core.celery_app worker -Q ai_orchestration -c 1 --loglevel=info -n ai@%h
+  #   env_file:
+  #     - ./backend/.env
+  #   networks:
+  #     - app_network
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
+  #     redis:
+  #       condition: service_healthy
+  #   healthcheck:
+  #     test: ["CMD-SHELL", "celery -A app.core.celery_app inspect ping -d ai@$$HOSTNAME || exit 1"]
+  #     interval: 30s
+  #     timeout: 10s
+  #     retries: 3
+  #     start_period: 20s
+  #   # Temporarily commented out - no actual tasks implemented for AI orchestration queue yet
+  #   # Uncomment when AI tasks are added
 
-  worker-send:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-      target: ${BUILD_TARGET:-development}
-    container_name: ${COMPOSE_PROJECT_NAME:-ai-email-assistant}-worker-send
-    restart: unless-stopped
-    command: celery -A app.core.celery_app worker -Q send -c 2 --loglevel=info -n send@%h
-    env_file:
-      - ./backend/.env
-    networks:
-      - app_network
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD-SHELL", "celery -A app.core.celery_app inspect ping -d send@$$HOSTNAME || exit 1"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 20s
+  # worker-send:
+  #   build:
+  #     context: ./backend
+  #     dockerfile: Dockerfile
+  #     target: ${BUILD_TARGET:-development}
+  #   container_name: ${COMPOSE_PROJECT_NAME:-ai-email-assistant}-worker-send
+  #   restart: unless-stopped
+  #   command: celery -A app.core.celery_app worker -Q send -c 2 --loglevel=info -n send@%h
+  #   env_file:
+  #     - ./backend/.env
+  #   networks:
+  #     - app_network
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
+  #     redis:
+  #       condition: service_healthy
+  #   healthcheck:
+  #     test: ["CMD-SHELL", "celery -A app.core.celery_app inspect ping -d send@$$HOSTNAME || exit 1"]
+  #     interval: 30s
+  #     timeout: 10s
+  #     retries: 3
+  #     start_period: 20s
+  #   # Temporarily commented out - no actual tasks implemented for send queue yet
+  #   # Uncomment when send tasks are added
 
   worker-notifications:
     build:

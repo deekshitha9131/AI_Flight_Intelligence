@@ -215,7 +215,9 @@ def _make_service(
     return service, thread_repository, email_repository
 
 
-async def test_sync_mailbox_raises_when_gmail_not_connected(monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_sync_mailbox_raises_when_gmail_not_connected(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     user = _user()
     gmail_client = FakeGmailClient(pages=[], messages_by_id={})
     service, _, _ = _make_service(monkeypatch, gmail_client=gmail_client, oauth_token=None)

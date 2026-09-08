@@ -1,5 +1,6 @@
 import uuid
 from datetime import datetime
+from typing import Any
 
 from sqlalchemy import DateTime, func
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
@@ -13,7 +14,7 @@ class UUIDPrimaryKeyMixin:
         default=uuid.uuid4,
     )
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs: Any) -> None:
         if "id" not in kwargs:
             kwargs["id"] = uuid.uuid4()
 

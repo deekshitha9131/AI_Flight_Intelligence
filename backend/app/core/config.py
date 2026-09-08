@@ -4,7 +4,6 @@ from functools import lru_cache
 from pydantic import Field, ValidationInfo, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-
 _ACTIVE_ENV = os.getenv("APP_ENV", "development")
 
 
@@ -25,7 +24,6 @@ class Settings(BaseSettings):
     app_debug: bool = Field(default=False, alias="APP_DEBUG")
     app_secret_key: str = Field(alias="APP_SECRET_KEY")
 
-   
     # --- Database ---
     database_url: str = Field(alias="DATABASE_URL")
     database_pool_size: int = Field(default=10, alias="DATABASE_POOL_SIZE")
@@ -73,7 +71,13 @@ class Settings(BaseSettings):
     llm_critique_model: str = Field(default="claude-sonnet-5", alias="LLM_CRITIQUE_MODEL")
 
     # --- Embeddings ---
+    # Separate from anthropic_api_key: Anthropic has no first-party
+    # embeddings API, and embedding_model's existing default
+    # (text-embedding-3-small) already anticipated an OpenAI-shaped
+    # provider (Phase 6, Task 6.3) — this key is what that provider
+    # actually authenticates with.
     embedding_model: str = Field(default="text-embedding-3-small", alias="EMBEDDING_MODEL")
+    openai_api_key: str = Field(default="", alias="OPENAI_API_KEY")
 
     # --- Rate limiting ---
     rate_limit_per_minute: int = Field(default=60, alias="RATE_LIMIT_PER_MINUTE")
@@ -174,8 +178,6 @@ class Settings(BaseSettings):
 
         return self
 
-
-
     @property
     def cors_origins(self) -> list[str]:
         """Parsed CORS origin list, derived from the raw comma-separated env value."""
@@ -188,5 +190,4 @@ class Settings(BaseSettings):
 
 @lru_cache
 def get_settings() -> Settings:
-   
     return Settings()  # type: ignore[call-arg]

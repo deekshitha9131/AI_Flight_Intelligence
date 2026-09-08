@@ -1,7 +1,7 @@
 """Tests for the POST /gmail/send endpoint
 (app/presentation/api/v1/routers/gmail.py).
 
-Same dependency_overrides pattern as test_gmail_api.py / 
+Same dependency_overrides pattern as test_gmail_api.py /
 test_incremental_sync_api.py — no live database, Redis, or Gmail
 involved. Also exercises GmailSendRequest's own Pydantic validation
 (invalid recipient, missing body) purely through the HTTP layer, since
@@ -98,9 +98,7 @@ def test_send_endpoint_reply_passes_thread_id(
 def test_send_endpoint_rejects_invalid_recipient(
     app_no_lifespan: FastAPI, unit_client: TestClient, fake_gmail_service: FakeGmailService
 ) -> None:
-    response = unit_client.post(
-        "/api/v1/gmail/send", json=_valid_payload(to=["not-a-valid-email"])
-    )
+    response = unit_client.post("/api/v1/gmail/send", json=_valid_payload(to=["not-a-valid-email"]))
 
     assert response.status_code == 400
     assert response.json()["error"]["code"] == "VALIDATION_ERROR"

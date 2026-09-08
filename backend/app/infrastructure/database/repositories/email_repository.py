@@ -1,11 +1,11 @@
 from datetime import datetime
-from typing import Literal
+from typing import Any, Literal
 from uuid import UUID
 
 from sqlalchemy import func, or_, select
-from sqlalchemy.orm import selectinload
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.application.dto.gmail import ParsedEmail
 from app.domain.entities.email import Attachment, Email
@@ -56,14 +56,14 @@ def _to_entity(model: EmailModel) -> Email:
 
 
 def _apply_filters(
-    stmt,
+    stmt: Any,
     *,
     user_id: UUID,
     is_read: bool | None,
     is_starred: bool | None,
     has_attachments: bool | None,
-):
-    
+) -> Any:
+
     stmt = stmt.where(EmailModel.user_id == user_id)
     if is_read is not None:
         stmt = stmt.where(EmailModel.is_read == is_read)
@@ -74,8 +74,8 @@ def _apply_filters(
     return stmt
 
 
-def _apply_search(stmt, *, user_id: UUID, query: str):
-   
+def _apply_search(stmt: Any, *, user_id: UUID, query: str) -> Any:
+
     pattern = f"%{query}%"
     return stmt.where(
         EmailModel.user_id == user_id,
@@ -89,7 +89,6 @@ def _apply_search(stmt, *, user_id: UUID, query: str):
 
 
 class EmailRepository:
-    
 
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
@@ -101,8 +100,6 @@ class EmailRepository:
         if model is None:
             raise EmailNotFoundError(f"No email found with id {email_id}.")
         return model
-
-    
 
     async def get_by_id(self, email_id: UUID) -> Email | None:
         stmt = (
@@ -183,12 +180,12 @@ class EmailRepository:
             has_attachments=has_attachments,
         )
         result = await self._session.execute(stmt)
-        return result.scalar_one()
+        return int(result.scalar_one())
 
     async def search_by_user_id(
         self, user_id: UUID, *, query: str, page: int = 1, page_size: int = 25
     ) -> list[Email]:
-       
+
         if page < 1:
             raise ValueError(f"page must be >= 1, got {page}")
         if page_size < 1:
@@ -209,11 +206,11 @@ class EmailRepository:
         return [_to_entity(model) for model in result.scalars().all()]
 
     async def count_search_by_user_id(self, user_id: UUID, *, query: str) -> int:
-        stmt = _apply_search(select(func.count()).select_from(EmailModel), user_id=user_id, query=query)
+        stmt = _apply_search(
+            select(func.count()).select_from(EmailModel), user_id=user_id, query=query
+        )
         result = await self._session.execute(stmt)
-        return result.scalar_one()
-
-    
+        return int(result.scalar_one())
 
     async def create(
         self,
@@ -275,7 +272,6 @@ class EmailRepository:
         await self._session.commit()
         await self._session.refresh(model)
         return _to_entity(model)
-
 
     async def delete(self, email_id: UUID) -> None:
         model = await self._get_model_or_raise(email_id)
@@ -349,8 +345,6 @@ class EmailRepository:
         result = await self._session.execute(stmt)
         model = result.scalar_one()
         return _to_entity(model), was_created
-
-  
 
     async def count_total(self, user_id: UUID) -> int:
         stmt = select(func.count()).select_from(EmailModel).where(EmailModel.user_id == user_id)

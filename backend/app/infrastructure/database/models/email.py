@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import TYPE_CHECKING
 from uuid import UUID
 
 from sqlalchemy import ARRAY, Boolean, DateTime, ForeignKey, String, Text, UniqueConstraint
@@ -8,13 +9,14 @@ from app.infrastructure.database.base import Base
 from app.infrastructure.database.mixins import TimestampMixin, UUIDPrimaryKeyMixin
 from app.infrastructure.database.models.attachment import AttachmentModel
 
+if TYPE_CHECKING:
+    from app.infrastructure.database.models.email_ai_understanding import EmailAIUnderstandingModel
+
 
 class EmailModel(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     __tablename__ = "emails"
     __table_args__ = (
-        UniqueConstraint(
-            "user_id", "gmail_message_id", name="uq_emails_user_id_gmail_message_id"
-        ),
+        UniqueConstraint("user_id", "gmail_message_id", name="uq_emails_user_id_gmail_message_id"),
     )
 
     thread_id: Mapped[UUID] = mapped_column(
@@ -41,6 +43,18 @@ class EmailModel(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     attachments: Mapped[list[AttachmentModel]] = relationship(
         back_populates="email",
         cascade="all, delete-orphan",
+        lazy="selectin",
+    )
+
+    # 1:0..1 with email_ai_understanding (Task 5.6). `lazy="noload"`
+    # (not "selectin" like attachments) — unlike attachments, which
+    # every email read already wants inline, AI understanding is read
+    # through its own dedicated repository
+    # (EmailAIUnderstandingRepository) on the specific occasions it's
+    # needed, so loading it on every plain email query would be waste.
+    ai_understanding: Mapped["EmailAIUnderstandingModel | None"] = relationship(  # noqa: F821
+        back_populates="email",
+        cascade="all, delete-orphan",
+        uselist=False,
         lazy="noload",
     )
-    

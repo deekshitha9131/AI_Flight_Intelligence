@@ -1,15 +1,14 @@
 import uuid
 from datetime import UTC, datetime, timedelta
-import pytest_asyncio
+
 import pytest
+import pytest_asyncio
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 
 from app.application.dto.gmail import ParsedAttachment, ParsedEmail
 from app.domain.exceptions.email import EmailAlreadyExistsError, EmailNotFoundError
 from app.infrastructure.database.base import Base
-from app.infrastructure.database.models.attachment import AttachmentModel
-from app.infrastructure.database.models.email import EmailModel
 from app.infrastructure.database.models.thread import ThreadModel
 from app.infrastructure.database.models.user import UserModel
 from app.infrastructure.database.repositories.email_repository import EmailRepository
@@ -75,7 +74,12 @@ async def _create_thread(
 
 
 def _create_kwargs(
-    *, thread_id: uuid.UUID, user_id: uuid.UUID, gmail_message_id: str, received_at: datetime, **overrides
+    *,
+    thread_id: uuid.UUID,
+    user_id: uuid.UUID,
+    gmail_message_id: str,
+    received_at: datetime,
+    **overrides,
 ) -> dict:
     base = dict(
         thread_id=thread_id,
@@ -121,7 +125,10 @@ async def test_get_by_gmail_message_id(repo: EmailRepository, user_and_thread) -
     user_id, thread_id = user_and_thread
     await repo.create(
         **_create_kwargs(
-            thread_id=thread_id, user_id=user_id, gmail_message_id="m-unique", received_at=_BASE_TIME
+            thread_id=thread_id,
+            user_id=user_id,
+            gmail_message_id="m-unique",
+            received_at=_BASE_TIME,
         )
     )
 
@@ -137,7 +144,11 @@ async def test_get_by_gmail_thread_id_returns_oldest_first(
 ) -> None:
     user_id, thread_id = user_and_thread
     async with session_factory() as session:
-        thread = (await session.execute(text("SELECT gmail_thread_id FROM threads WHERE id = :id"), {"id": thread_id})).scalar_one()
+        thread = (
+            await session.execute(
+                text("SELECT gmail_thread_id FROM threads WHERE id = :id"), {"id": thread_id}
+            )
+        ).scalar_one()
 
     await repo.create(
         **_create_kwargs(
@@ -205,7 +216,11 @@ async def test_get_by_user_id_filters_unread(repo: EmailRepository, user_and_thr
     user_id, thread_id = user_and_thread
     await repo.create(
         **_create_kwargs(
-            thread_id=thread_id, user_id=user_id, gmail_message_id="read", received_at=_BASE_TIME, is_read=True
+            thread_id=thread_id,
+            user_id=user_id,
+            gmail_message_id="read",
+            received_at=_BASE_TIME,
+            is_read=True,
         )
     )
     await repo.create(
@@ -247,7 +262,9 @@ async def test_get_by_user_id_filters_starred(repo: EmailRepository, user_and_th
     assert [e.gmail_message_id for e in starred_only] == ["starred"]
 
 
-async def test_get_by_user_id_filters_has_attachments(repo: EmailRepository, user_and_thread) -> None:
+async def test_get_by_user_id_filters_has_attachments(
+    repo: EmailRepository, user_and_thread
+) -> None:
     user_id, thread_id = user_and_thread
     await repo.create(
         **_create_kwargs(
@@ -308,16 +325,23 @@ async def test_get_by_user_id_only_returns_this_users_emails(
     thread_b = await _create_thread(session_factory, user_b)
 
     await repo.create(
-        **_create_kwargs(thread_id=thread_a, user_id=user_a, gmail_message_id="a1", received_at=_BASE_TIME)
+        **_create_kwargs(
+            thread_id=thread_a, user_id=user_a, gmail_message_id="a1", received_at=_BASE_TIME
+        )
     )
     await repo.create(
-        **_create_kwargs(thread_id=thread_b, user_id=user_b, gmail_message_id="b1", received_at=_BASE_TIME)
+        **_create_kwargs(
+            thread_id=thread_b, user_id=user_b, gmail_message_id="b1", received_at=_BASE_TIME
+        )
     )
 
     results = await repo.get_by_user_id(user_a)
     assert [e.gmail_message_id for e in results] == ["a1"]
 
-async def test_create_duplicate_gmail_message_id_raises(repo: EmailRepository, user_and_thread) -> None:
+
+async def test_create_duplicate_gmail_message_id_raises(
+    repo: EmailRepository, user_and_thread
+) -> None:
     user_id, thread_id = user_and_thread
     await repo.create(
         **_create_kwargs(
@@ -352,7 +376,9 @@ async def test_update_is_read_and_is_starred(repo: EmailRepository, user_and_thr
     assert updated.is_starred is True
 
 
-async def test_update_leaves_unspecified_fields_unchanged(repo: EmailRepository, user_and_thread) -> None:
+async def test_update_leaves_unspecified_fields_unchanged(
+    repo: EmailRepository, user_and_thread
+) -> None:
     user_id, thread_id = user_and_thread
     created = await repo.create(
         **_create_kwargs(
@@ -393,6 +419,7 @@ async def test_delete_raises_for_missing_email(repo: EmailRepository) -> None:
     with pytest.raises(EmailNotFoundError):
         await repo.delete(uuid.uuid4())
 
+
 def _parsed_email(gmail_message_id: str, **overrides) -> ParsedEmail:
     defaults = dict(
         gmail_message_id=gmail_message_id,
@@ -424,7 +451,9 @@ async def test_upsert_twice_does_not_duplicate(repo: EmailRepository, user_and_t
     assert len(all_matching) == 1
 
 
-async def test_upsert_with_attachment_stores_attachment(repo: EmailRepository, user_and_thread) -> None:
+async def test_upsert_with_attachment_stores_attachment(
+    repo: EmailRepository, user_and_thread
+) -> None:
     user_id, thread_id = user_and_thread
     parsed = _parsed_email(
         "m-with-attachment",
@@ -480,7 +509,9 @@ async def test_counts_reflect_stored_emails(repo: EmailRepository, user_and_thre
     assert await repo.count_starred(user_id) == 1
 
 
-async def test_counts_are_zero_for_user_with_no_emails(repo: EmailRepository, session_factory) -> None:
+async def test_counts_are_zero_for_user_with_no_emails(
+    repo: EmailRepository, session_factory
+) -> None:
     user_id = await _create_user(session_factory)
 
     assert await repo.count_total(user_id) == 0
@@ -495,19 +526,26 @@ async def test_counts_are_scoped_per_user(repo: EmailRepository, session_factory
     thread_b = await _create_thread(session_factory, user_b)
 
     await repo.create(
-        **_create_kwargs(thread_id=thread_a, user_id=user_a, gmail_message_id="a1", received_at=_BASE_TIME)
+        **_create_kwargs(
+            thread_id=thread_a, user_id=user_a, gmail_message_id="a1", received_at=_BASE_TIME
+        )
     )
     await repo.create(
-        **_create_kwargs(thread_id=thread_b, user_id=user_b, gmail_message_id="b1", received_at=_BASE_TIME)
+        **_create_kwargs(
+            thread_id=thread_b, user_id=user_b, gmail_message_id="b1", received_at=_BASE_TIME
+        )
     )
     await repo.create(
-        **_create_kwargs(thread_id=thread_b, user_id=user_b, gmail_message_id="b2", received_at=_BASE_TIME)
+        **_create_kwargs(
+            thread_id=thread_b, user_id=user_b, gmail_message_id="b2", received_at=_BASE_TIME
+        )
     )
 
     assert await repo.count_total(user_a) == 1
     assert await repo.count_total(user_b) == 2
+
+
 # --- add to the existing imports at the top of the file ---
-from app.domain.exceptions.email import EmailAlreadyExistsError, EmailNotFoundError  # already present
 # (no new imports needed beyond what Task 4.1 already has)
 
 
@@ -617,7 +655,9 @@ async def test_search_is_case_insensitive(repo: EmailRepository, user_and_thread
     assert [e.gmail_message_id for e in results] == ["m1"]
 
 
-async def test_search_returns_empty_list_for_no_match(repo: EmailRepository, user_and_thread) -> None:
+async def test_search_returns_empty_list_for_no_match(
+    repo: EmailRepository, user_and_thread
+) -> None:
     user_id, thread_id = user_and_thread
     await repo.create(
         **_create_kwargs(

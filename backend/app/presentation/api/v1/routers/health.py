@@ -28,9 +28,7 @@ router = APIRouter(prefix="/health", tags=[OpenAPITags.HEALTH])
     description="Verifies the API can reach PostgreSQL and Redis. "
     "Used by orchestration to decide whether to route traffic here.",
 )
-async def readiness_check(
-    db: DbSession, redis_client: RedisClient  # type: ignore[type-arg]
-) -> dict[str, Any]:
+async def readiness_check(db: DbSession, redis_client: RedisClient) -> dict[str, Any]:
     # The ignore above is required at this usage site specifically —
     # see app/infrastructure/cache/redis_client.py's module docstring.
     # mypy re-checks RedisClient's expansion (Annotated[redis.Redis, ...])

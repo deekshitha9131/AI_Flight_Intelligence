@@ -18,6 +18,7 @@ def settings() -> Settings:
     """The application's real settings, sourced the same way the app itself sources them."""
     return get_settings()
 
+
 @pytest.fixture
 def app_no_lifespan() -> FastAPI:
     return create_app()
@@ -28,6 +29,7 @@ def unit_client(app_no_lifespan: FastAPI) -> Generator[TestClient, None, None]:
     client = TestClient(app_no_lifespan, raise_server_exceptions=False)
     yield client
     app_no_lifespan.dependency_overrides.clear()
+
 
 async def _postgres_reachable(settings: Settings) -> bool:
     engine = create_db_engine(settings)

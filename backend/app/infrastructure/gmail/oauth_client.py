@@ -43,6 +43,10 @@ class GoogleOAuthClient:
         self._redirect_uri = redirect_uri
         self._http = http_client
 
+    @property
+    def is_configured(self) -> bool:
+        return bool(self._client_id and self._client_secret and self._redirect_uri)
+
     def build_authorization_url(self, *, state: str) -> str:
 
         params = {

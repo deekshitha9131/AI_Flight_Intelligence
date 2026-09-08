@@ -7,9 +7,7 @@ _SESSION_KEY_PREFIX = "session:"
 
 
 class SessionStore:
-    def __init__(
-        self, *, redis_client: redis.Redis, ttl_seconds: int  # type: ignore[type-arg]
-    ) -> None:
+    def __init__(self, *, redis_client: redis.Redis, ttl_seconds: int) -> None:
         self._redis = redis_client
         self._ttl_seconds = ttl_seconds
 
@@ -28,12 +26,11 @@ class SessionStore:
         raw = await self._redis.get(f"{_SESSION_KEY_PREFIX}{session_id}")
         if raw is None:
             return None
+        val = raw.decode("utf-8") if isinstance(raw, bytes) else str(raw)
         try:
-            return uuid.UUID(raw)
+            return uuid.UUID(val)
         except ValueError:
-           
             return None
 
     async def delete_session(self, session_id: str) -> None:
-       
         await self._redis.delete(f"{_SESSION_KEY_PREFIX}{session_id}")

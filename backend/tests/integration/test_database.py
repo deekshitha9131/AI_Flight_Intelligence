@@ -13,6 +13,8 @@ from app.infrastructure.database.engine import create_db_engine, dispose_engine
 from app.infrastructure.database.session import create_session_factory
 from app.infrastructure.vector.types import embedding_column
 
+pytestmark = pytest.mark.integration
+
 
 class _IntegrationCheckModel(Base):
     """Temporary model used only by the database integration tests."""
@@ -33,27 +35,6 @@ class _IntegrationCheckModel(Base):
     embedding: Mapped[list[float] | None] = embedding_column(
         nullable=True,
     )
-
-
-@pytest.fixture()
-async def db_engine():
-    """Create an async database engine for the integration tests."""
-
-    settings = Settings()
-
-    engine = create_db_engine(settings)
-
-    try:
-        yield engine
-    finally:
-        await dispose_engine(engine)
-
-
-@pytest.fixture()
-async def session_factory(db_engine):
-    """Create the async session factory used by the integration tests."""
-
-    return create_session_factory(db_engine)
 
 
 @pytest.fixture(autouse=True)
@@ -89,17 +70,13 @@ async def test_pgvector_extension_is_available(db_engine):
     """Verify that the PostgreSQL pgvector extension is installed."""
 
     async with db_engine.connect() as connection:
-        result = await connection.execute(
-            text(
-                """
+        result = await connection.execute(text("""
                 SELECT EXISTS (
                     SELECT 1
                     FROM pg_extension
                     WHERE extname = 'vector'
                 )
-                """
-            )
-        )
+                """))
 
         assert result.scalar_one() is True
 

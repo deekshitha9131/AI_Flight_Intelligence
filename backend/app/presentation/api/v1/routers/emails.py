@@ -3,9 +3,8 @@
 Implements the read-only inbox endpoints: listing and detail
 (Task 4.2), and search (Task 4.3). Every endpoint is served entirely
 from PostgreSQL via EmailService — this file never touches
-EmailRepository, SQLAlchemy, or Gmail directly, only translates
-between HTTP concerns (query params, path params, response schemas)
-and the service call.
+Gmail directly, only translates between HTTP concerns (query params,
+path params, response schemas) and the service call.
 
 `/search` is registered before `/{email_id}` — `email_id` is UUID-typed
 so `"search"` would never actually match it, but registering the
@@ -16,11 +15,14 @@ a literal path segment that could otherwise sit next to a dynamic one.
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, status
 
 from app.application.services.email_service import EmailService
+from app.ai.rag.indexing_service import EmailIndexingService
 from app.core.constants import OpenAPITags
-from app.core.di_container import CurrentUser, get_email_service
+from app.core.di_container import CurrentUser, get_email_service, get_email_indexing_service
+from app.domain.entities.email import Email
+from app.domain.exceptions.email import EmailNotFoundError
 from app.presentation.api.v1.schemas.email import (
     EmailDetail,
     EmailListResponse,
@@ -32,6 +34,26 @@ from app.presentation.api.v1.schemas.email import (
 router = APIRouter(prefix="/emails", tags=[OpenAPITags.EMAILS])
 
 EmailServiceDep = Annotated[EmailService, Depends(get_email_service)]
+EmailIndexingServiceDep = Annotated[EmailIndexingService, Depends(get_email_indexing_service)]
+
+
+@router.post(
+    "/{email_id}/index",
+    status_code=status.HTTP_200_OK,
+    summary="Index an email for RAG retrieval",
+    description="Triggers the indexing pipeline for a specific email: preprocesses, chunks, generates embeddings, and stores the results in the vector database. Returns the number of chunks created. Idempotent — re-indexing replaces existing chunks.",
+    response_model=int,
+)
+async def index_email(
+    current_user: CurrentUser,
+    email_id: UUID,
+    email_service: EmailServiceDep,
+    indexing_service: EmailIndexingServiceDep,
+) -> int:
+    """Index an email for RAG retrieval."""
+    email = await email_service.get_email(current_user, email_id)
+    chunk_count = await indexing_service.index_email(email)
+    return chunk_count
 
 
 @router.get(

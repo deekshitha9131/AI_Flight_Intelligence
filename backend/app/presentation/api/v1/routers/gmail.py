@@ -38,9 +38,10 @@ GmailServiceDep = Annotated[GmailService, Depends(get_gmail_service)]
 async def sync_mailbox(
     current_user: CurrentUser,
     gmail_service: GmailServiceDep,
-    payload: GmailSyncRequest = GmailSyncRequest(),
+    payload: GmailSyncRequest | None = None,
 ) -> GmailSyncResponse:
-    summary = await gmail_service.sync_mailbox(current_user, page_token=payload.page_token)
+    request_payload = payload or GmailSyncRequest()
+    summary = await gmail_service.sync_mailbox(current_user, page_token=request_payload.page_token)
     return GmailSyncResponse.model_validate(summary)
 
 

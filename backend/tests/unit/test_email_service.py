@@ -78,7 +78,13 @@ async def test_list_emails_passes_params_through_to_repository() -> None:
     service = EmailService(email_repository=repo)
 
     await service.list_emails(
-        user, page=2, page_size=10, sort="oldest", is_read=False, is_starred=True, has_attachments=None
+        user,
+        page=2,
+        page_size=10,
+        sort="oldest",
+        is_read=False,
+        is_starred=True,
+        has_attachments=None,
     )
 
     assert repo.get_by_user_id_calls[0] == {

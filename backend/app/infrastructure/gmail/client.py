@@ -1,8 +1,9 @@
 import asyncio
 import base64
+from collections.abc import Callable
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
-from typing import Any, Callable, TypeVar
+from typing import Any, TypeVar, cast
 
 import structlog
 from google.auth.exceptions import GoogleAuthError
@@ -35,7 +36,7 @@ class GmailClient:
 
     def _build_credentials(self) -> Credentials:
         """Build google-auth Credentials from the stored (decrypted) OAuth tokens."""
-        return Credentials(
+        return Credentials(  # type: ignore[no-untyped-call]
             token=self._oauth_token.access_token,
             refresh_token=self._oauth_token.refresh_token,
             token_uri=GOOGLE_TOKEN_ENDPOINT,
@@ -81,9 +82,12 @@ class GmailClient:
             raise GmailAuthenticationError(
                 "Failed to authenticate with Gmail using the stored OAuth tokens."
             ) from exc
+
     async def get_profile(self) -> dict[str, Any]:
         """Return the connected Gmail account's profile."""
-        return await self._execute(lambda service: service.users().getProfile(userId="me").execute())
+        return await self._execute(
+            lambda service: service.users().getProfile(userId="me").execute()
+        )
 
     async def list_messages(
         self,
@@ -96,21 +100,28 @@ class GmailClient:
         """List message IDs matching the given filters."""
 
         def _call(service: Resource) -> dict[str, Any]:
-            request = service.users().messages().list(
-                userId="me",
-                q=query,
-                labelIds=label_ids,
-                pageToken=page_token,
-                maxResults=max_results,
+            request = (
+                service.users()
+                .messages()
+                .list(
+                    userId="me",
+                    q=query,
+                    labelIds=label_ids,
+                    pageToken=page_token,
+                    maxResults=max_results,
+                )
             )
-            return request.execute()
+            return cast(dict[str, Any], request.execute())
 
         return await self._execute(_call)
 
     async def get_message(self, message_id: str, *, format: str = "full") -> dict[str, Any]:
         """Fetch a single message by Gmail message ID."""
         return await self._execute(
-            lambda service: service.users().messages().get(userId="me", id=message_id, format=format).execute()
+            lambda service: service.users()
+            .messages()
+            .get(userId="me", id=message_id, format=format)
+            .execute()
         )
 
     async def list_history(
@@ -119,22 +130,30 @@ class GmailClient:
         """List mailbox changes since `start_history_id`."""
 
         def _call(service: Resource) -> dict[str, Any]:
-            request = service.users().history().list(
-                userId="me",
-                startHistoryId=start_history_id,
-                pageToken=page_token,
+            request = (
+                service.users()
+                .history()
+                .list(
+                    userId="me",
+                    startHistoryId=start_history_id,
+                    pageToken=page_token,
+                )
             )
-            return request.execute()
+            return cast(dict[str, Any], request.execute())
 
         return await self._execute(_call)
 
-    async def send_message(self, *, raw_message: str, thread_id: str | None = None) -> dict[str, Any]:
+    async def send_message(
+        self, *, raw_message: str, thread_id: str | None = None
+    ) -> dict[str, Any]:
 
         def _call(service: Resource) -> dict[str, Any]:
             body: dict[str, Any] = {"raw": raw_message}
             if thread_id is not None:
                 body["threadId"] = thread_id
-            return service.users().messages().send(userId="me", body=body).execute()
+            return cast(
+                dict[str, Any], service.users().messages().send(userId="me", body=body).execute()
+            )
 
         return await self._execute(_call)
 
@@ -148,7 +167,7 @@ class GmailClient:
         body_text: str | None,
         body_html: str | None,
     ) -> MIMEMultipart | MIMEText:
-       
+
         if body_text and body_html:
             message: MIMEMultipart | MIMEText = MIMEMultipart("alternative")
             message.attach(MIMEText(body_text, "plain", "utf-8"))
@@ -185,7 +204,12 @@ class GmailClient:
         thread_id: str | None = None,
     ) -> dict[str, Any]:
         message = self._build_mime_message(
-            to=to, cc=cc or [], bcc=bcc or [], subject=subject, body_text=body_text, body_html=body_html
+            to=to,
+            cc=cc or [],
+            bcc=bcc or [],
+            subject=subject,
+            body_text=body_text,
+            body_html=body_html,
         )
         raw_message = self._encode_base64url(message)
         return await self.send_message(raw_message=raw_message, thread_id=thread_id)

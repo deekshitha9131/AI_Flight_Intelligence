@@ -82,7 +82,10 @@ class FakeUserRepository:
 
 
 def _make_service(
-    monkeypatch: pytest.MonkeyPatch, *, gmail_client: FakeGmailClient, oauth_token: OAuthToken | None
+    monkeypatch: pytest.MonkeyPatch,
+    *,
+    gmail_client: FakeGmailClient,
+    oauth_token: OAuthToken | None,
 ) -> GmailService:
     service = GmailService(
         user_repository=FakeUserRepository(oauth_token=oauth_token),
@@ -100,7 +103,9 @@ def _make_service(
 async def test_send_email_success(monkeypatch: pytest.MonkeyPatch) -> None:
     user = _user()
     gmail_client = FakeGmailClient()
-    service = _make_service(monkeypatch, gmail_client=gmail_client, oauth_token=_oauth_token(user.id))
+    service = _make_service(
+        monkeypatch, gmail_client=gmail_client, oauth_token=_oauth_token(user.id)
+    )
 
     result = await service.send_email(
         user, to=["bob@example.com"], subject="Hi", body_text="Hello there."
@@ -117,7 +122,9 @@ async def test_send_email_reply_passes_thread_id_through(monkeypatch: pytest.Mon
     user = _user()
     gmail_client = FakeGmailClient()
     gmail_client.response_to_return = {"id": "sent-2", "threadId": "existing-thread"}
-    service = _make_service(monkeypatch, gmail_client=gmail_client, oauth_token=_oauth_token(user.id))
+    service = _make_service(
+        monkeypatch, gmail_client=gmail_client, oauth_token=_oauth_token(user.id)
+    )
 
     result = await service.send_email(
         user,
@@ -146,7 +153,9 @@ async def test_send_email_propagates_gmail_api_failure(monkeypatch: pytest.Monke
     user = _user()
     gmail_client = FakeGmailClient()
     gmail_client.raise_on_send = GmailAPIError("Gmail returned a 500.")
-    service = _make_service(monkeypatch, gmail_client=gmail_client, oauth_token=_oauth_token(user.id))
+    service = _make_service(
+        monkeypatch, gmail_client=gmail_client, oauth_token=_oauth_token(user.id)
+    )
 
     with pytest.raises(GmailAPIError):
         await service.send_email(user, to=["bob@example.com"], subject="Hi", body_text="Hello.")
@@ -161,10 +170,16 @@ async def test_send_email_falls_back_to_requested_thread_id_if_response_omits_it
     user = _user()
     gmail_client = FakeGmailClient()
     gmail_client.response_to_return = {"id": "sent-3"}  # no threadId key
-    service = _make_service(monkeypatch, gmail_client=gmail_client, oauth_token=_oauth_token(user.id))
+    service = _make_service(
+        monkeypatch, gmail_client=gmail_client, oauth_token=_oauth_token(user.id)
+    )
 
     result = await service.send_email(
-        user, to=["bob@example.com"], subject="Re: Hi", body_text="Body.", thread_id="requested-thread"
+        user,
+        to=["bob@example.com"],
+        subject="Re: Hi",
+        body_text="Body.",
+        thread_id="requested-thread",
     )
 
     assert result.gmail_thread_id == "requested-thread"

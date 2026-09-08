@@ -1,6 +1,7 @@
 from datetime import UTC, datetime, timedelta
-import pytest_asyncio
+
 import pytest
+import pytest_asyncio
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncEngine, async_sessionmaker
 
@@ -24,6 +25,7 @@ async def prepared_db(db_engine: AsyncEngine):
     async with db_engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
         from sqlalchemy import text
+
         await conn.execute(text("DROP TYPE IF EXISTS user_status"))
 
 

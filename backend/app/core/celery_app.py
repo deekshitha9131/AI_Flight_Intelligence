@@ -21,16 +21,12 @@ celery_app.conf.update(
     accept_content=["json"],
     timezone="UTC",
     enable_utc=True,
-    
     task_track_started=True,
     task_time_limit=settings.celery_task_time_limit,
     task_soft_time_limit=settings.celery_task_soft_time_limit,
-    
     task_acks_late=True,
     task_reject_on_worker_lost=True,
-   
     worker_prefetch_multiplier=1,
-   
     result_expires=3600,
 )
 
@@ -41,7 +37,6 @@ celery_app.conf.task_routes = {
     "app.workers.ai_tasks.*": {"queue": "ai_orchestration"},
     "app.workers.send_tasks.*": {"queue": "send"},
     "app.workers.notification_tasks.*": {"queue": "notifications"},
-   
     "app.workers.health_tasks.*": {"queue": "notifications"},
 }
 

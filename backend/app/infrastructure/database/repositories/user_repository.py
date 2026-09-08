@@ -1,4 +1,3 @@
-
 from datetime import UTC, datetime
 from uuid import UUID
 
@@ -29,7 +28,6 @@ def _to_entity(model: UserModel) -> User:
 
 
 class UserRepository:
-    
 
     def __init__(self, session: AsyncSession, token_cipher: TokenCipher) -> None:
         self._session = session
@@ -114,7 +112,7 @@ class UserRepository:
         token_expiry: datetime,
         granted_scopes: list[str],
     ) -> None:
-       
+
         stmt = select(OAuthTokenModel).where(OAuthTokenModel.user_id == user_id)
         result = await self._session.execute(stmt)
         model = result.scalar_one_or_none()
@@ -155,12 +153,12 @@ class UserRepository:
         )
 
     async def get_gmail_history_id(self, user_id: UUID) -> str | None:
-        
+
         model = await self._get_model_or_raise(user_id)
         return str(model.gmail_history_id) if model.gmail_history_id is not None else None
 
     async def update_gmail_history_id(self, user_id: UUID, history_id: str) -> None:
-       
+
         model = await self._get_model_or_raise(user_id)
         model.gmail_history_id = int(history_id)
         await self._session.commit()
