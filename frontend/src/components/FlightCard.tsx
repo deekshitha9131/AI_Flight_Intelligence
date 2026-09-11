@@ -5,11 +5,15 @@ import Badge from './ui/Badge';
 interface FlightCardProps {
   flight: FlightResponse;
   onSelect?: (flight: FlightResponse) => void;
+  isFavourite?: boolean;
+  onToggleFavourite?: (flight: FlightResponse) => void;
 }
 
 const FlightCard: React.FC<FlightCardProps> = ({
   flight,
-  onSelect
+  onSelect,
+  isFavourite = false,
+  onToggleFavourite
 }) => {
   const formatTime = (isoString: string) => {
     try {
@@ -40,7 +44,7 @@ const FlightCard: React.FC<FlightCardProps> = ({
         <div className="flight-route"><div><strong className="airport-code">{flight.origin}</strong><div className="time">{formatTime(flight.departure_time)}</div></div><span className="route-line" aria-hidden="true" /><div><strong className="airport-code">{flight.destination}</strong><div className="time">{formatTime(flight.arrival_time)}</div></div></div>
         <div className="flight-meta"><span className={`badge ${flight.stops > 0 ? 'badge-warning' : ''}`}>{stopsText}</span>{flight.fare_options && flight.fare_options.length > 1 && <span>{flight.fare_options.length} fare options</span>}</div>
       </div>
-      <div className="flight-price"><div className="price">{flight.currency} {flight.price.toFixed(2)}</div><div className="price-caption">per passenger</div><button className="btn btn-outline" type="button" onClick={() => onSelect?.(flight)}>View details <span aria-hidden="true">→</span></button></div>
+      <div className="flight-price"><div className="price">{flight.currency} {flight.price.toFixed(2)}</div><div className="price-caption">per passenger</div><div className="flight-card-actions"><button className="btn btn-outline" type="button" onClick={() => onSelect?.(flight)}>View details <span aria-hidden="true">→</span></button>{onToggleFavourite && <button className="btn btn-ghost" type="button" onClick={() => onToggleFavourite(flight)} aria-label={isFavourite ? 'Remove from favourites' : 'Save to favourites'} title={isFavourite ? 'Remove from favourites' : 'Save to favourites'}>{isFavourite ? '★' : '☆'}</button>}</div></div>
     </article>
   );
 };

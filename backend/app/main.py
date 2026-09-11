@@ -7,6 +7,7 @@ from app.api.v1.conversation import router as conversation_router
 from app.api.v1.predictions import router as prediction_router
 from app.api.v1.recommendations import router as recommendations_router
 from app.api.v1.preferences import router as preferences_router
+from app.api.v1.favourites import router as favourites_router
 
 app = FastAPI(
     title=settings.APP_NAME,
@@ -44,6 +45,7 @@ app.include_router(conversation_router, prefix="/api/v1")
 app.include_router(prediction_router, prefix="/api/v1")
 app.include_router(recommendations_router, prefix="/api/v1")
 app.include_router(preferences_router, prefix="/api/v1")
+app.include_router(favourites_router, prefix="/api/v1")
 
 @app.get("/health")
 async def health_check():

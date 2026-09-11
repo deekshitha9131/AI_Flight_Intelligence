@@ -11,6 +11,7 @@ import DashboardPage from './components/pages/DashboardPage';
 import PredictionsPage from './components/pages/PredictionsPage';
 import RecommendationsPage from './components/pages/RecommendationsPage';
 import ProfilePage from './components/pages/ProfilePage';
+import FavouritesPage from './components/pages/FavouritesPage';
 import { useAuth } from './store/authContext';
 import { ThemeProvider } from './store/themeContext';
 
@@ -37,6 +38,7 @@ const App: React.FC = () => {
             <Route path="/dashboard" element={<ProtectedRoutes><DashboardPage /></ProtectedRoutes>} />
             <Route path="/flights" element={<ProtectedRoutes><FlightsPage /></ProtectedRoutes>} />
             <Route path="/predictions" element={<ProtectedRoutes><PredictionsPage /></ProtectedRoutes>} />
+            <Route path="/favourites" element={<ProtectedRoutes><FavouritesPage /></ProtectedRoutes>} />
             <Route path="/recommendations" element={<ProtectedRoutes><RecommendationsPage /></ProtectedRoutes>} />
             <Route path="/assistant" element={<ProtectedRoutes><AssistantPage /></ProtectedRoutes>} />
             <Route path="/preferences" element={<ProtectedRoutes><PreferencesPage /></ProtectedRoutes>} />

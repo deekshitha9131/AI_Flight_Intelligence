@@ -20,7 +20,7 @@ from app.database.session import Base
 from app.core.config import settings
 
 # import all models to ensure they are registered with Base.metadata
-from app.models import user, conversation, message, flight_search, prediction, preference  # noqa
+from app.models import user, conversation, message, flight_search, prediction, preference, favourite  # noqa
 
 target_metadata = Base.metadata
 

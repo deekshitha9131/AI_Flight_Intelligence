@@ -18,6 +18,7 @@ from app.schemas.prediction import PredictionRequest, PredictionResponse
 from app.core.config import settings
 
 logger = logging.getLogger(__name__)
+MODEL_CURRENCY = "INR"
 
 class PredictionService:
     def __init__(self, db: Session):
@@ -186,14 +187,14 @@ class PredictionService:
             user_id=user_id,
             flight_search_id=flight_search_id,
             predicted_price=predicted_price,
-            currency=request.currency,
+            currency=MODEL_CURRENCY,
             model_version="v1.0.0"
         )
 
         # Return response
         return PredictionResponse(
             predicted_price=predicted_price,
-            currency=request.currency,
+            currency=MODEL_CURRENCY,
             is_estimate=True,
             model_version="v1.0.0"
         )

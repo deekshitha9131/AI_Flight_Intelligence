@@ -108,8 +108,17 @@ a { color: inherit; text-decoration: none; }
 .field label { color: var(--muted); font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
 .field input, .field select { width: 100%; height: 44px; padding: 0 13px; border: 1px solid var(--line); border-radius: 9px; outline: 0; background: var(--surface); color: var(--ink); transition: .2s ease; }
 .field input:focus, .field select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.airport-suggestion { display: flex; justify-content: space-between; gap: 8px; padding: 8px 10px; border: 1px solid var(--line); background: var(--surface-soft); color: var(--ink); font-size: 12px; text-align: left; }
+.airport-suggestion:first-of-type { margin-top: 2px; }
+.airport-suggestion span { overflow: hidden; color: var(--muted); text-overflow: ellipsis; white-space: nowrap; }
+.airport-suggestion:hover { border-color: var(--accent); color: var(--accent-strong); }
 
 .results-head { display: flex; justify-content: space-between; align-items: center; gap: 16px; }
+.detail-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; margin-top: 22px; }
+.detail-grid > div { display: grid; gap: 4px; padding: 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface-soft); }
+.detail-grid .wide { grid-column: 1 / -1; }
+.detail-grid strong { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; }
+.detail-grid span { color: var(--muted); font-size: 13px; }
 .flight-list { display: grid; gap: 12px; }
 .flight-card { display: grid; grid-template-columns: 1fr auto; gap: 24px; padding: 22px; transition: .2s ease; }
 .flight-card:hover { border-color: color-mix(in srgb, var(--accent) 50%, var(--line)); box-shadow: var(--shadow); transform: translateY(-2px); }
@@ -121,6 +130,7 @@ a { color: inherit; text-decoration: none; }
 .route-line::after { content: '✦'; position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); padding: 0 8px; background: var(--surface); color: var(--accent); font-size: 12px; }
 .time { color: var(--muted); font-size: 12px; }
 .flight-price { align-self: center; text-align: right; }
+.flight-card-actions { display: flex; align-items: center; justify-content: flex-end; gap: 4px; }
 .price { font: 700 25px var(--font-display); letter-spacing: -.04em; }
 .price-caption { margin: 3px 0 12px; color: var(--faint); font-size: 11px; }
 .badge { display: inline-flex; align-items: center; min-height: 24px; padding: 0 9px; border-radius: 999px; background: var(--accent-soft); color: var(--accent-strong); font-size: 11px; font-weight: 700; }
@@ -163,6 +173,10 @@ a { color: inherit; text-decoration: none; }
 .auth-heading p { color: var(--muted); font-size: 14px; }
 .auth-form form { display: grid; gap: 16px; }
 .auth-form .field input { height: 48px; }
+.password-input { position: relative; }
+.password-input input { padding-right: 48px; }
+.password-toggle { position: absolute; top: 50%; right: 10px; width: 30px; height: 30px; transform: translateY(-50%); border: 0; background: transparent; color: var(--muted); }
+.password-toggle:hover { color: var(--accent); }
 .auth-link { color: var(--accent-strong); font-weight: 700; }
 .auth-error { padding: 12px 14px; border: 1px solid color-mix(in srgb, var(--danger) 32%, var(--line)); border-radius: 9px; background: color-mix(in srgb, var(--danger) 7%, var(--surface)); color: var(--danger); font-size: 13px; }
 .auth-footer { margin-top: 22px; color: var(--muted); font-size: 13px; text-align: center; }
@@ -219,6 +233,8 @@ a { color: inherit; text-decoration: none; }
   .search-grid, .form-grid, .quick-grid { grid-template-columns: 1fr; }
   .search-grid .search-action, .form-grid .wide { grid-column: auto; }
   .flight-card { grid-template-columns: 1fr; gap: 16px; }
+  .detail-grid { grid-template-columns: 1fr; }
+  .detail-grid .wide { grid-column: auto; }
   .flight-price { text-align: left; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
   .price-caption { margin: 0; }
   .assistant-layout { grid-template-columns: 1fr; }

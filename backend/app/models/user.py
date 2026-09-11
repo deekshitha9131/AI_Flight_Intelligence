@@ -20,3 +20,4 @@ class User(Base):
     flight_searches = relationship("FlightSearch", back_populates="user", cascade="all, delete-orphan")
     predictions = relationship("Prediction", back_populates="user", cascade="all, delete-orphan")
     preferences = relationship("Preference", back_populates="user", uselist=False, cascade="all, delete-orphan")
+    favourites = relationship("Favourite", back_populates="user", cascade="all, delete-orphan")
