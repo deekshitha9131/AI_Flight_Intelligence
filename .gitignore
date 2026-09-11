@@ -1,0 +1,53 @@
+# Environment / secrets
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Node
+node_modules/
+dist/
+build/
+.vite/
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Local databases / generated data
+*.db
+*.sqlite
+*.sqlite3
+
+# Model/runtime generated files
+*.joblib.tmp
+
+# Claude local files
+.claude/
+
+# Backup / temporary files
+*.bak
+*.bak2
+*.bak3
+*backup*
+*tmp_*
